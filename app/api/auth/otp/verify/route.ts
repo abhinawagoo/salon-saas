@@ -7,7 +7,8 @@ import { nanoid } from 'nanoid'
 const DEV_OTP = '1234'
 // When USE_WHATSAPP_OTP=true, verify against DB (no 1234 bypass)
 const USE_WHATSAPP_OTP = process.env.USE_WHATSAPP_OTP === 'true'
-const DEV_BYPASS = process.env.NODE_ENV !== 'production' && !USE_WHATSAPP_OTP
+// DEMO_MODE=true allows 1234 bypass even in production (for demos)
+const DEV_BYPASS = (process.env.NODE_ENV !== 'production' || process.env.DEMO_MODE === 'true') && !USE_WHATSAPP_OTP
 
 type UserRow = { id: string; name: string; mobile: string; role: string }
 
