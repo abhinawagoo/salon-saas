@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendInvoiceWhatsApp } from '@/lib/whatsapp-cloud'
+import { recordSystemMessage } from '@/lib/whatsapp-chat'
 import { getOrAssignBillNo } from '@/lib/billNo'
 import { getPublicInvoiceUrl } from '@/lib/invoiceUrl'
 import { notifyStaffBookingManagersAfterPayment } from '@/lib/notify'
@@ -128,6 +129,16 @@ export async function POST(request: Request) {
                 appointmentDate: b.date,
                 appointmentTimeSlot: b.timeSlot,
               })
+              await recordSystemMessage(
+                b.user.mobile,
+                `Invoice sent — Bill ${billNo} · ₹${Math.round(amountPaid)} paid`,
+                {
+                  customerName: b.user.name || undefined,
+                  templateName: process.env.WHATSAPP_INVOICE_TEMPLATE_NAME || 'customer_invoice',
+                  refType: 'payment',
+                  refId: bookingId,
+                }
+              )
             } catch (e) {
               console.error('Invoice WhatsApp failed:', e)
             }

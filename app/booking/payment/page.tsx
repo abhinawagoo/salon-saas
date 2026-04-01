@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { format, startOfDay, endOfDay, addDays, subMinutes, parseISO } from 'date-fns'
-import PaymentScreen from '@/components/PaymentScreen'
+import PaymentScreen, { type ResolvedPaymentOption, type PaymentType } from '@/components/PaymentScreen'
 import { parseBusinessHours, getDayConfig, isWithinClosingTime } from '@/lib/slots'
 
 const ARRIVAL_BUFFER_MINUTES = 10
@@ -21,12 +21,15 @@ function PaymentPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [services, setServices] = useState<Service[]>([])
+  const [groupSize, setGroupSize] = useState(1)
+  const [groupPersons, setGroupPersons] = useState<Array<{ personIndex: number; services: Service[] }>>([])
   const [hasData, setHasData] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [totalBump, setTotalBump] = useState(false)
   const [showClosingTimePopup, setShowClosingTimePopup] = useState(false)
   const [showArrivalPopup, setShowArrivalPopup] = useState(false)
-  const [selectedPaymentType, setSelectedPaymentType] = useState<'FULL' | 'ADVANCE' | null>(null)
+  const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType | null>(null)
+  const [paymentOptions, setPaymentOptions] = useState<ResolvedPaymentOption[]>([])
   const [businessHoursJson, setBusinessHoursJson] = useState<string | null>(null)
   const [retryBookingId, setRetryBookingId] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
@@ -76,19 +79,46 @@ function PaymentPageContent() {
       return
     }
     
-    // Allow empty services - user may have deleted all; we'll show empty state
-    let parsed: (Service & { quantity?: number })[] = []
+    // Parse services — support both v2 group format and legacy flat array
+    let flatServices: Service[] = []
+    let parsedGroupSize = 1
+    let parsedPersons: Array<{ personIndex: number; services: Service[] }> = []
+
     if (servicesData) {
       try {
         const p = JSON.parse(servicesData)
-        parsed = Array.isArray(p) ? p : []
+        if (p?.version === 2 && Array.isArray(p.persons)) {
+          parsedGroupSize = p.groupSize ?? 1
+          parsedPersons = p.persons.map((person: { personIndex: number; services: Service[] }) => ({
+            personIndex: person.personIndex,
+            services: person.services.map((s) => ({ ...s, quantity: (s as Service & { quantity?: number }).quantity ?? 1 })),
+          }))
+          flatServices = parsedPersons.flatMap((person) => person.services)
+        } else if (Array.isArray(p)) {
+          flatServices = p.map((s) => ({ ...s, quantity: (s as Service & { quantity?: number }).quantity ?? 1 }))
+          parsedPersons = [{ personIndex: 0, services: flatServices }]
+        }
       } catch {
-        parsed = []
+        flatServices = []
       }
     }
-    const loaded = parsed.map((s) => ({ ...s, quantity: s.quantity ?? 1 }))
-    setServices(loaded)
+    setGroupSize(parsedGroupSize)
+    setGroupPersons(parsedPersons)
+    setServices(flatServices)
     setHasData(true)
+
+    // Fetch payment options from admin config
+    const total = flatServices.reduce((sum, s) => sum + s.price * ((s as Service & { quantity?: number }).quantity ?? 1), 0)
+    fetch(`/api/booking/payment-config?total=${total}`)
+      .then((r) => r.json())
+      .then((data: { options: ResolvedPaymentOption[] }) => {
+        setPaymentOptions(data.options || [])
+        // Auto-select if only one option
+        if (data.options?.length === 1) {
+          setSelectedPaymentType(data.options[0].type)
+        }
+      })
+      .catch(() => {})
 
     // Fetch business hours for closing-time validation
     const loc = JSON.parse(location) as { id: string }
@@ -139,7 +169,7 @@ function PaymentPageContent() {
     }
   }, [services, businessHoursJson])
 
-  const doPayment = async (paymentType: 'FULL' | 'ADVANCE') => {
+  const doPayment = async (paymentType: PaymentType) => {
     setIsProcessing(true)
     try {
       if (retryBookingId) {
@@ -169,19 +199,25 @@ function PaymentPageContent() {
 
       const customerDetails = JSON.parse(sessionStorage.getItem('customerDetails') || '{}')
       const dateTime = JSON.parse(sessionStorage.getItem('bookingDateTime') || '{}')
-
       const location = JSON.parse(sessionStorage.getItem('bookingLocation') || '{}')
-      const servicesPayload = services.flatMap((s) =>
-        Array((s.quantity ?? 1)).fill(null).map(() => s.id)
-      )
+
+      // Send group booking format
+      const groupServicesPayload = groupPersons.length > 0
+        ? groupPersons.map((person) => ({
+            personIndex: person.personIndex,
+            serviceIds: person.services.flatMap((s) =>
+              Array((s as Service & { quantity?: number }).quantity ?? 1).fill(s.id)
+            ),
+          }))
+        : [{ personIndex: 0, serviceIds: services.flatMap((s) => Array((s as Service & { quantity?: number }).quantity ?? 1).fill(s.id)) }]
+
       const response = await fetch('/api/booking', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           locationId: location.id,
-          services: servicesPayload,
+          groupServices: groupServicesPayload,
+          groupSize,
           customerDetails,
           date: dateTime.date,
           timeSlot: dateTime.timeSlot,
@@ -190,14 +226,24 @@ function PaymentPageContent() {
       })
 
       const data = await response.json()
-      
+
       if (data.error) {
         alert(data.error)
         setIsProcessing(false)
         return
       }
-      
-      // PhonePe: redirect to PayPage (reliable; iframe can be re-enabled later with correct script for env)
+
+      // FREE (pay at salon): booking confirmed immediately, no gateway
+      if (data.noPayment) {
+        sessionStorage.removeItem('bookingLocation')
+        sessionStorage.removeItem('selectedServices')
+        sessionStorage.removeItem('customerDetails')
+        sessionStorage.removeItem('bookingDateTime')
+        router.replace(`/booking/confirmation?bookingId=${data.bookingId}`)
+        return
+      }
+
+      // PhonePe: redirect to PayPage
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl
         return
@@ -244,7 +290,7 @@ function PaymentPageContent() {
     }
   }
 
-  const handlePaymentTypeSelect = (paymentType: 'FULL' | 'ADVANCE') => {
+  const handlePaymentTypeSelect = (paymentType: PaymentType) => {
     if (services.length === 0) return
     if (wouldExceedClosing(services)) {
       setShowClosingTimePopup(true)
@@ -258,7 +304,7 @@ function PaymentPageContent() {
     setShowArrivalPopup(false)
   }
 
-  const handlePaymentInitiate = (paymentType: 'FULL' | 'ADVANCE', paymentMethod?: string) => {
+  const handlePaymentInitiate = (paymentType: PaymentType, paymentMethod?: string) => {
     if (services.length === 0) {
       alert('Please add at least one service to proceed with payment.')
       return
@@ -271,8 +317,11 @@ function PaymentPageContent() {
     return null
   }
 
-  const totalAmount = services.reduce((sum, s) => sum + s.price * (s.quantity ?? 1), 0)
-  const totalDurationMinutes = services.reduce((sum, s) => sum + s.duration * (s.quantity ?? 1), 0)
+  const totalAmount = services.reduce((sum, s) => sum + s.price * ((s as Service & { quantity?: number }).quantity ?? 1), 0)
+  // Parallel duration: max of per-person totals for group, sequential for solo
+  const totalDurationMinutes = groupPersons.length > 1
+    ? Math.max(...groupPersons.map((p) => p.services.reduce((sum, s) => sum + s.duration * ((s as Service & { quantity?: number }).quantity ?? 1), 0)), 0)
+    : services.reduce((sum, s) => sum + s.duration * ((s as Service & { quantity?: number }).quantity ?? 1), 0)
 
   const formatDuration = (mins: number): string => {
     if (mins < 60) return `${mins} min`
@@ -406,6 +455,7 @@ function PaymentPageContent() {
               disabled={showClosingTimePopup}
               selectedPaymentType={selectedPaymentType}
               onPaymentTypeSelect={handlePaymentTypeSelect}
+              paymentOptions={paymentOptions.length > 0 ? paymentOptions : undefined}
             />
             )}
             <p className="mt-6 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">

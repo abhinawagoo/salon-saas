@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendInvoiceWhatsApp } from '@/lib/whatsapp-cloud'
+import { recordSystemMessage } from '@/lib/whatsapp-chat'
 import { getOrAssignBillNo } from '@/lib/billNo'
 import { getPublicInvoiceUrl } from '@/lib/invoiceUrl'
 import { normalizeMobileForDb } from '@/lib/phone'
@@ -95,6 +96,14 @@ export async function POST(
         { status: 502 }
       )
     }
+
+    // Record in unified chat DB
+    await recordSystemMessage(targetMobile, `Invoice sent — Bill ${billNo} · ₹${Math.round(amountPaid)} paid`, {
+      customerName: booking.user.name || undefined,
+      templateName: process.env.WHATSAPP_INVOICE_TEMPLATE_NAME || 'customer_invoice',
+      refType: 'payment',
+      refId: bookingId,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (error) {

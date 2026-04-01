@@ -20,7 +20,8 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   
-  bookings Booking[]
+  bookings      Booking[]
+  conversations WhatsAppConversation[]
 }
 
 // OTP for mobile login/signup; expires in 10 min
@@ -96,6 +97,7 @@ model Location {
   businessHoursJson  String?   // JSON: [{ dayOfWeek: 0-6, isOpen: bool, openTime?: "09:00", closeTime?: "18:00" }]
   closedDatesJson    String?   // JSON: ["2025-01-01", "2025-12-25"] - specific dates closed (festivals, holidays, etc.)
   staffBookingNotifyPhones String? // JSON array of 10-digit mobiles — WhatsApp booking alerts for this location only
+  concurrentSlots    Int       @default(1) // Max simultaneous bookings at this location
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   
@@ -111,6 +113,7 @@ model Booking {
   date            DateTime
   timeSlot        String   // e.g., "10:00", "11:00"
   durationMinutes Int      @default(30) // Total service duration at booking time (blocks slots until start + duration)
+  groupSize       Int      @default(1)  // Number of people in this group booking
   status          String   @default("BOOKED") // BOOKED, COMPLETED, CANCELLED
   notes           String?
   token           String   @unique // Booking confirmation token
@@ -134,12 +137,13 @@ model BookingService {
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   serviceId String
   service   Service  @relation(fields: [serviceId], references: [id])
-  price     Float    // Total price at time of booking (unit price × quantity)
-  quantity  Int      @default(1) // Number of units
-  
+  price       Float    // Total price at time of booking (unit price × quantity)
+  quantity    Int      @default(1) // Number of units
+  personIndex Int      @default(0) // Which person in the group (0-based)
+
   createdAt DateTime @default(now())
-  
-  @@unique([bookingId, serviceId])
+
+  @@unique([bookingId, serviceId, personIndex])
 }
 
 model Payment {
@@ -157,6 +161,54 @@ model Payment {
   gatewayResponse  String?  // Full gateway response JSON
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// ─── WhatsApp Unified Chat ───────────────────────────────────────────────────
+
+// One conversation per customer mobile number.
+// Shared inbox for incoming, agent, and system messages.
+model WhatsAppConversation {
+  id                 String    @id @default(cuid())
+  mobile             String    @unique  // E.164 without + (e.g. 919876543210)
+  customerName       String?
+  userId             String?
+  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  unreadCount        Int       @default(0)
+  isResolved         Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@index([lastMessageAt(sort: Desc)])
+}
+
+// Every message (inbound or outbound) stored here for the unified timeline.
+model WhatsAppMessage {
+  id             String               @id @default(cuid())
+  conversationId String
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  waMessageId    String?  @unique  // wamid.xxx — from WhatsApp API (null until sent)
+  direction      String   // "inbound" | "outbound"
+  senderType     String   // "user" | "agent" | "system"
+  body           String
+  messageType    String   @default("text") // text | image | document | audio | video | sticker
+
+  // Delivery status (outbound only)
+  status         String   @default("pending") // pending | sent | delivered | read | failed | received
+
+  // Optional metadata for system messages
+  templateName   String?
+  refType        String?  // "booking" | "payment" | "otp" | "crm"
+  refId          String?  // bookingId / paymentId etc.
+
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([waMessageId])
 }
 
 // Home page short videos (reels-style carousel)
@@ -185,5 +237,6 @@ model SiteCustomization {
   invoiceSignatureUrl String?  // Signature image shown in invoice signature box
   facebookUrl         String?  // Facebook profile/page URL for footer
   instagramUrl        String?  // Instagram profile URL for footer
+  paymentConfigJson   String?  // JSON: PaymentConfig (see lib/paymentConfig.ts)
   updatedAt           DateTime @updatedAt
 }

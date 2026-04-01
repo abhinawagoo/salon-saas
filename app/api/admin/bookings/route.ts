@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const bookings = await prisma.booking.findMany({
       where: {
         ...(locationId ? { locationId } : {}),
-        payment: { paymentStatus: 'COMPLETED' },
+        payment: { paymentStatus: { in: ['COMPLETED', 'FREE'] } },
       },
       include: {
         location: {

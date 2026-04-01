@@ -16,6 +16,13 @@ interface Location {
   imageUrl: string | null
 }
 
+interface ServiceItem {
+  id: string
+  name: string
+  price: number
+  duration: number
+}
+
 interface Booking {
   id: string
   token: string
@@ -59,6 +66,11 @@ export default function StaffDashboard() {
   const [sendInvoiceBooking, setSendInvoiceBooking] = useState<Booking | null>(null)
   const [sendInvoiceMobile, setSendInvoiceMobile] = useState('')
   const [sendInvoiceSending, setSendInvoiceSending] = useState(false)
+  const [editServicesBooking, setEditServicesBooking] = useState<Booking | null>(null)
+  const [availableServices, setAvailableServices] = useState<ServiceItem[]>([])
+  const [servicesQty, setServicesQty] = useState<Record<string, number>>({})
+  const [servicesLoading, setServicesLoading] = useState(false)
+  const [editServicesSaving, setEditServicesSaving] = useState(false)
 
   useEffect(() => {
     setUserRole('STAFF')
@@ -189,6 +201,56 @@ export default function StaffDashboard() {
       alert(e instanceof Error ? e.message : 'Failed to update payment')
     } finally {
       setPaymentSaving(false)
+    }
+  }
+
+  const openEditServicesModal = async (booking: Booking) => {
+    setEditServicesBooking(booking)
+    setServicesQty({})
+    setServicesLoading(true)
+    try {
+      const res = await fetch('/api/admin/services')
+      const data = await res.json()
+      setAvailableServices(Array.isArray(data) ? data : [])
+    } catch {
+      setAvailableServices([])
+    } finally {
+      setServicesLoading(false)
+    }
+  }
+
+  const closeEditServicesModal = () => {
+    setEditServicesBooking(null)
+    setAvailableServices([])
+    setServicesQty({})
+  }
+
+  const handleSaveServices = async () => {
+    if (!editServicesBooking) return
+    const serviceIds = Object.entries(servicesQty)
+      .filter(([, qty]) => qty > 0)
+      .flatMap(([id, qty]) => Array<string>(qty).fill(id))
+    if (serviceIds.length === 0) {
+      closeEditServicesModal()
+      return
+    }
+    setEditServicesSaving(true)
+    try {
+      const res = await fetch(`/api/staff/booking/${editServicesBooking.id}/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceIds }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to add services')
+      }
+      closeEditServicesModal()
+      fetchBookings()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to add services')
+    } finally {
+      setEditServicesSaving(false)
     }
   }
 
@@ -324,11 +386,13 @@ export default function StaffDashboard() {
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
               booking.payment?.paymentStatus === 'COMPLETED'
                 ? 'bg-green-100 text-green-800'
+                : booking.payment?.paymentStatus === 'FREE'
+                ? 'bg-blue-100 text-blue-800'
                 : booking.payment?.paymentStatus === 'FAILED'
                 ? 'bg-red-100 text-red-800'
                 : 'bg-yellow-100 text-yellow-800'
             }`}>
-              {booking.payment?.paymentStatus || 'PENDING'}
+              {booking.payment?.paymentStatus === 'FREE' ? 'Pay at Salon' : (booking.payment?.paymentStatus || 'PENDING')}
             </span>
             {booking.payment && (
               <>
@@ -350,6 +414,15 @@ export default function StaffDashboard() {
                 </button>
               </>
             )}
+            <button
+              type="button"
+              onClick={() => openEditServicesModal(booking)}
+              className="inline-flex items-center gap-1 px-2 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-medium hover:bg-purple-200"
+              title="Add more services"
+            >
+              <Edit3 size={14} />
+              Add services
+            </button>
             <button
               type="button"
               onClick={() => window.open(`/booking/invoice?token=${encodeURIComponent(booking.token)}`, '_blank')}
@@ -496,6 +569,80 @@ export default function StaffDashboard() {
                 className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
                 {paymentSaving ? 'Saving...' : paymentModal.mode === 'add_cash' ? 'Record cash' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Services modal */}
+      {editServicesBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[80vh] flex flex-col">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Add services</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Booking {editServicesBooking.token} — pick services to add on top of existing ones.
+            </p>
+            {servicesLoading ? (
+              <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading services…</div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {availableServices.map((svc) => {
+                  const qty = servicesQty[svc.id] ?? 0
+                  return (
+                    <div key={svc.id} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2.5">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{svc.name}</div>
+                        <div className="text-xs text-gray-400">₹{svc.price} · {svc.duration} min</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setServicesQty((prev) => ({ ...prev, [svc.id]: Math.max(0, (prev[svc.id] ?? 0) - 1) }))}
+                          disabled={qty === 0}
+                          className="w-7 h-7 rounded-full bg-gray-100 text-gray-700 font-bold text-base flex items-center justify-center hover:bg-gray-200 disabled:opacity-30"
+                        >−</button>
+                        <span className="w-5 text-center text-sm font-medium">{qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => setServicesQty((prev) => ({ ...prev, [svc.id]: (prev[svc.id] ?? 0) + 1 }))}
+                          className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 font-bold text-base flex items-center justify-center hover:bg-primary-200"
+                        >+</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {/* Summary of selected */}
+            {Object.values(servicesQty).some((q) => q > 0) && (
+              <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-600">
+                Adding:{' '}
+                {Object.entries(servicesQty)
+                  .filter(([, q]) => q > 0)
+                  .map(([id, q]) => {
+                    const s = availableServices.find((sv) => sv.id === id)
+                    return s ? `${s.name}${q > 1 ? ` ×${q}` : ''}` : ''
+                  })
+                  .filter(Boolean)
+                  .join(', ')}
+              </div>
+            )}
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={closeEditServicesModal}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveServices}
+                disabled={editServicesSaving || !Object.values(servicesQty).some((q) => q > 0)}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {editServicesSaving ? 'Saving…' : 'Add services'}
               </button>
             </div>
           </div>

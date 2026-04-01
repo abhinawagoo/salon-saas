@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromCookie } from '@/lib/auth-jwt'
 import { AUTH_DISABLED_FOR_NOW } from '@/lib/auth'
-import { getSlotsInRange, isWithinClosingTime, MAX_BOOKINGS_PER_SLOT, parseBusinessHours, getDayConfig } from '@/lib/slots'
+import { getSlotsInRange, isWithinClosingTime, calcParallelDurationMinutes, parseBusinessHours, getDayConfig } from '@/lib/slots'
 import { buildBookingNotificationPayload, sendBookingNotification } from '@/lib/notify'
 import { normalizeMobileForDb } from '@/lib/phone'
 import { createPhonePePayment } from '@/lib/phonepe'
+import { parsePaymentConfig, getEnabledOptions, calcOptionAmount } from '@/lib/paymentConfig'
 import { nanoid } from 'nanoid'
 
 type UserRow = { id: string; name: string; mobile: string; role: string }
@@ -25,7 +26,16 @@ async function initiatePhonePePayment(bookingId: string, amount: number): Promis
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { locationId, services, customerDetails, date, timeSlot, paymentType } = body
+    const { locationId, services, groupServices, groupSize, customerDetails, date, timeSlot, paymentType } = body
+
+    // Normalize to per-person format
+    // groupServices: [{ personIndex: number, serviceIds: string[] }]
+    // services (legacy): string[] — treated as all from person 0
+    type PersonServices = { personIndex: number; serviceIds: string[] }
+    const personsData: PersonServices[] = groupServices && Array.isArray(groupServices)
+      ? groupServices
+      : [{ personIndex: 0, serviceIds: Array.isArray(services) ? services : [] }]
+    const bookingGroupSize: number = groupSize && groupSize > 1 ? Math.min(groupSize, 10) : personsData.length || 1
 
     if (!locationId) {
       return NextResponse.json(
@@ -97,18 +107,14 @@ export async function POST(request: Request) {
       user = { ...user, name: customerDetails.name }
     }
 
-    // Get service details (services may contain duplicates for quantity)
-    const serviceIds = services as string[]
-    const uniqueIds = [...new Set(serviceIds)] as string[]
+    // Collect all service IDs across all persons
+    const allServiceIds = personsData.flatMap((p) => p.serviceIds)
+    const uniqueIds = [...new Set(allServiceIds)]
     const serviceDetails = await prisma.service.findMany({
-      where: {
-        id: { in: uniqueIds },
-        isActive: true,
-      },
+      where: { id: { in: uniqueIds }, isActive: true },
     })
-
     const serviceMap = new Map(serviceDetails.map((s) => [s.id, s]))
-    const invalidIds = serviceIds.filter((id) => !serviceMap.has(id))
+    const invalidIds = allServiceIds.filter((id) => !serviceMap.has(id))
     if (invalidIds.length > 0) {
       return NextResponse.json(
         { error: 'Some services are invalid or inactive' },
@@ -116,11 +122,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Total service duration (minutes) - sum duration for each instance
-    const totalDurationMinutes = Math.max(
-      30,
-      serviceIds.reduce((sum, id) => sum + (serviceMap.get(id)?.duration ?? 0), 0)
+    // Parallel duration: each person's services run concurrently with others
+    // Total = max(per-person duration sums)
+    const personDurations = personsData.map((p) =>
+      p.serviceIds.map((id) => serviceMap.get(id)?.duration ?? 0)
     )
+    const totalDurationMinutes = calcParallelDurationMinutes(personDurations)
 
     // Validate: day is open and time is within business hours (per location)
     const bookingDate = new Date(date)
@@ -168,14 +175,18 @@ export async function POST(request: Request) {
     const endOfBookingDate = new Date(bookingDateObj)
     endOfBookingDate.setHours(23, 59, 59, 999)
 
-    const existingBookings = await prisma.booking.findMany({
-      where: {
-        locationId,
-        date: { gte: startOfBookingDate, lte: endOfBookingDate },
-        status: { not: 'CANCELLED' },
-      },
-      select: { timeSlot: true, durationMinutes: true },
-    })
+    const [existingBookings, locationCapacity] = await Promise.all([
+      prisma.booking.findMany({
+        where: {
+          locationId,
+          date: { gte: startOfBookingDate, lte: endOfBookingDate },
+          status: { not: 'CANCELLED' },
+        },
+        select: { timeSlot: true, durationMinutes: true },
+      }),
+      prisma.location.findUnique({ where: { id: locationId }, select: { concurrentSlots: true } }),
+    ])
+    const maxConcurrent = locationCapacity?.concurrentSlots ?? 1
 
     const slotCounts: Record<string, number> = {}
     existingBookings.forEach((b) => {
@@ -186,28 +197,52 @@ export async function POST(request: Request) {
     })
 
     const newBookingSlots = getSlotsInRange(timeSlot, totalDurationMinutes)
-    const wouldExceed = newBookingSlots.some((slot) => (slotCounts[slot] || 0) >= MAX_BOOKINGS_PER_SLOT)
+    const wouldExceed = newBookingSlots.some((slot) => (slotCounts[slot] || 0) >= maxConcurrent)
     if (wouldExceed) {
       return NextResponse.json(
-        { error: `This time is no longer available (slot full for the service duration). Please choose another time.` },
+        { error: `This time is fully booked. Please choose another time slot.` },
         { status: 400 }
       )
     }
 
-    // Calculate total amount - sum price for each service instance
-    const totalAmount = serviceIds.reduce((sum, id) => sum + (serviceMap.get(id)?.price ?? 0), 0)
-    const advanceAmount = paymentType === 'ADVANCE' ? totalAmount * 0.3 : totalAmount
+    // Calculate total amount - sum all service prices across all persons
+    const totalAmount = allServiceIds.reduce((sum, id) => sum + (serviceMap.get(id)?.price ?? 0), 0)
 
-    // Generate booking token
+    // Resolve advance amount from payment config (admin-configured %, not hardcoded 30%)
+    let advanceAmount = totalAmount
+    const isFreeBooking = paymentType === 'FREE'
+    if (paymentType === 'ADVANCE') {
+      const configRow = await prisma.siteCustomization.findUnique({
+        where: { id: 1 },
+        select: { paymentConfigJson: true },
+      })
+      const config = parsePaymentConfig(configRow?.paymentConfigJson)
+      const advOpt = getEnabledOptions(config).find((o) => o.type === 'ADVANCE')
+      advanceAmount = advOpt ? calcOptionAmount(advOpt, totalAmount) : totalAmount * 0.3
+    } else if (isFreeBooking) {
+      advanceAmount = 0
+    }
+
     const bookingToken = generateToken()
 
-    // Build BookingService rows: unique (bookingId, serviceId) with quantity and total price
-    const serviceCounts = new Map<string, number>()
-    serviceIds.forEach((id) => serviceCounts.set(id, (serviceCounts.get(id) ?? 0) + 1))
+    // Build BookingService rows: unique (bookingId, serviceId, personIndex) with quantity
+    // Group by (personIndex, serviceId) to merge duplicates within same person
+    const servicesByPersonAndId = new Map<string, { serviceId: string; quantity: number; personIndex: number }>()
+    personsData.forEach((person) => {
+      person.serviceIds.forEach((id) => {
+        const key = `${person.personIndex}:${id}`
+        const existing = servicesByPersonAndId.get(key)
+        if (existing) {
+          existing.quantity += 1
+        } else {
+          servicesByPersonAndId.set(key, { serviceId: id, quantity: 1, personIndex: person.personIndex })
+        }
+      })
+    })
 
-    const bookingServicesCreate = Array.from(serviceCounts.entries()).map(([serviceId, quantity]) => {
+    const bookingServicesCreate = Array.from(servicesByPersonAndId.values()).map(({ serviceId, quantity, personIndex }) => {
       const s = serviceMap.get(serviceId)!
-      return { serviceId: s.id, price: s.price * quantity, quantity }
+      return { serviceId: s.id, price: s.price * quantity, quantity, personIndex }
     })
 
     // Create booking
@@ -218,6 +253,7 @@ export async function POST(request: Request) {
         date: new Date(date),
         timeSlot,
         durationMinutes: totalDurationMinutes,
+        groupSize: bookingGroupSize,
         status: 'BOOKED',
         notes: customerDetails.notes,
         token: bookingToken,
@@ -231,8 +267,8 @@ export async function POST(request: Request) {
             amountPaid: 0,
             onlineAmount: 0,
             cashAmount: 0,
-            paymentType: paymentType === 'ADVANCE' ? 'ADVANCE' : 'FULL',
-            paymentStatus: 'PENDING',
+            paymentType: paymentType === 'ADVANCE' ? 'ADVANCE' : paymentType === 'FREE' ? 'FREE' : 'FULL',
+            paymentStatus: isFreeBooking ? 'FREE' : 'PENDING',
           },
         },
       },
@@ -245,6 +281,16 @@ export async function POST(request: Request) {
         payment: true,
       },
     })
+
+    // FREE booking: no payment gateway needed
+    if (isFreeBooking) {
+      sendBookingNotification(user.mobile, buildBookingNotificationPayload(
+        { token: booking.token, date: booking.date, timeSlot: booking.timeSlot, services: booking.services, user: { name: user.name, mobile: user.mobile } },
+        totalAmount
+      ), 'customer').catch((e) => console.error('Notify customer failed:', e))
+
+      return NextResponse.json({ bookingId: booking.id, token: bookingToken, noPayment: true })
+    }
 
     // Use test payment only when explicitly enabled; otherwise try PhonePe (works in dev if credentials set)
     const useTestPayment = process.env.USE_TEST_PAYMENT === 'true'

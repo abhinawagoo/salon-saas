@@ -517,6 +517,41 @@ async function sendWhatsAppTemplateBodyOnly(
   }
 }
 
+/**
+ * Send a free-text WhatsApp message (works only within 24h customer-initiated window).
+ * For marketing to cold customers, use sendWhatsAppTemplate instead.
+ */
+export async function sendWhatsAppText(
+  mobile: string,
+  text: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { token, phoneId } = getConfig()
+  if (!token || !phoneId) return { ok: false, error: 'Not configured' }
+  const to = toE164(mobile)
+  const url = `${GRAPH_API}/${phoneId}/messages`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { body: text },
+      }),
+    })
+    const data = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+    if (!res.ok) {
+      const msg = data.error?.message || res.statusText
+      logWhatsAppError(res.status, msg, to)
+      return { ok: false, error: msg }
+    }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
+
 export async function sendBookingConfirmationWhatsApp(
   mobile: string,
   customerName: string,
