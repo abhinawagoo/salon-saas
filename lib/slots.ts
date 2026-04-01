@@ -129,6 +129,19 @@ function timeToSlot(time: string, roundUp: boolean): string {
  * Get slots between openTime and closeTime.
  * Last bookable slot = closeTime - 30 min (users can book up to 30 min before closing).
  */
+/**
+ * Calculate duration for a group booking (parallel services).
+ * Each person's services run in parallel, so total = max of per-person totals.
+ * personDurations[i] = array of service durations for person i
+ */
+export function calcParallelDurationMinutes(personDurations: number[][]): number {
+  if (personDurations.length === 0) return 30
+  const perPersonTotals = personDurations.map((durations) =>
+    durations.reduce((sum, d) => sum + d, 0)
+  )
+  return Math.max(30, Math.max(...perPersonTotals))
+}
+
 export function getSlotsBetween(openTime: string, closeTime: string): string[] {
   const startSlot = timeToSlot(openTime, true)
   const startIdx = TIME_SLOTS.indexOf(startSlot)
