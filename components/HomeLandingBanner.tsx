@@ -52,16 +52,12 @@ export default function HomeLandingBanner({ slides, onNext }: HomeLandingBannerP
   }
 
   if (slides.length === 0) {
-    return (
-      <div className="w-full h-full min-h-[200px] rounded-[1.5rem] sm:rounded-[2rem] bg-gradient-to-br from-[#F8F3FA] via-[#F4EFF6] to-[#F0D6E6] flex items-center justify-center">
-        <p className="text-[#6B5B73]">Add a banner in Admin → Customize</p>
-      </div>
-    )
+    return <div className="w-full h-full bg-gradient-to-br from-charcoal-dark to-charcoal" />
   }
 
   return (
     <div
-      className="relative w-full h-full min-h-0 flex-1 rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden"
+      className="relative w-full h-full overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -70,15 +66,15 @@ export default function HomeLandingBanner({ slides, onNext }: HomeLandingBannerP
         tabIndex={0}
         onClick={handleClick}
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-        className="flex h-full cursor-pointer transition-transform duration-500 ease-out"
+        className="flex h-full cursor-pointer transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
         {slides.map((slide, i) => (
           <div key={i} className="min-w-full flex-shrink-0 h-full relative">
             <img
               src={slide.imageUrl}
-              alt={slide.alt || (i === 0 ? "Shahsharam Salon best salon in Sasaram Bihar" : "Professional haircut at Shahsharam Salon Sasaram")}
-              className="absolute inset-0 w-full h-full object-cover rounded-[1.5rem] sm:rounded-[2rem]"
+              alt={slide.alt || 'Valessio Paris'}
+              className="absolute inset-0 w-full h-full object-cover"
               draggable={false}
               loading={i === 0 ? 'eager' : 'lazy'}
             />
@@ -86,14 +82,14 @@ export default function HomeLandingBanner({ slides, onNext }: HomeLandingBannerP
         ))}
       </div>
 
-      {/* Dots indicator */}
+      {/* Line dots — gold style */}
       {slides.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+        <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
           {slides.map((_, i) => (
             <span
               key={i}
-              className={`block w-2 h-2 rounded-full transition-all ring-1 ring-white/50 ${
-                i === activeIndex ? 'bg-[#EC738A] w-4' : 'bg-[#E6D6E6]'
+              className={`block h-px transition-all duration-300 ${
+                i === activeIndex ? 'bg-gold w-6' : 'bg-white/40 w-3'
               }`}
             />
           ))}

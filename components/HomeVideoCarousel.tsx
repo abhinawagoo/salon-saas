@@ -62,66 +62,61 @@ export default function HomeVideoCarousel({ videos }: HomeVideoCarouselProps) {
     })
   }, [activeIndex])
 
-  const handleEnded = () => {
-    goNext()
-  }
-
   if (videos.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-[#F8F3FA]/80 rounded-2xl sm:rounded-[1.5rem] md:rounded-[2rem]">
-        <p className="text-[#6B5B73] text-sm">Add videos in Admin → Customize → Home Videos</p>
+      <div className="w-full h-full flex items-center justify-center bg-ivory rounded-2xl">
+        <p className="text-stone text-xs tracking-widest uppercase font-sans">No videos yet</p>
       </div>
     )
   }
 
   return (
     <div
-      className="relative w-full h-full min-h-0 bg-transparent"
+      className="relative w-full h-full bg-charcoal-dark rounded-2xl overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Video container - curved corners, scales with viewport */}
       <div
         role="button"
         tabIndex={0}
         onClick={handleClick}
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-        className="w-full h-full min-h-0 rounded-2xl sm:rounded-[1.5rem] md:rounded-[2rem] overflow-hidden relative cursor-pointer"
+        className="w-full h-full cursor-pointer"
       >
         <div
-          className="flex h-full min-h-0 transition-transform duration-500 ease-out"
+          className="flex h-full transition-transform duration-500 ease-out"
           style={{ transform: `translateX(-${activeIndex * 100}%)` }}
         >
           {videos.map((v, i) => (
-            <div key={v.id} className="min-w-full flex-shrink-0 h-full min-h-0 flex items-center justify-center bg-black/5">
+            <div key={v.id} className="min-w-full flex-shrink-0 h-full flex items-center justify-center">
               <video
                 ref={(el) => { videoRefs.current[i] = el }}
                 src={v.videoUrl}
-                className="w-full h-full max-w-full max-h-full object-contain rounded-2xl sm:rounded-[1.5rem] md:rounded-[2rem]"
+                className="w-full h-full object-cover"
                 muted
                 playsInline
                 autoPlay
-                onEnded={handleEnded}
+                onEnded={goNext}
                 preload={i === 0 ? 'auto' : 'metadata'}
               />
             </div>
           ))}
         </div>
-
-        {/* Dots indicator */}
-        {videos.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-            {videos.map((_, i) => (
-              <span
-                key={i}
-                className={`block w-2 h-2 rounded-full transition-all ${
-                  i === activeIndex ? 'bg-[#EC738A] w-4' : 'bg-[#E6D6E6]'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Gold line dots */}
+      {videos.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+          {videos.map((_, i) => (
+            <span
+              key={i}
+              className={`block h-px transition-all duration-300 ${
+                i === activeIndex ? 'bg-gold w-6' : 'bg-white/30 w-3'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

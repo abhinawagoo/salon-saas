@@ -1,43 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: 44, 36, 32;
+  --background: #FAFAF8;
 }
 
-/* Soft lavender/pink theme */
 html {
-  background: #F8F3FA;
+  background: var(--background);
+  scroll-behavior: smooth;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: #F8F3FA;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background: var(--background);
+  font-family: 'Jost', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+  .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
 }
 
-
-/* Touch-friendly buttons */
+/* Touch-friendly */
 button, a {
   -webkit-tap-highlight-color: transparent;
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
 }
 
 /* Print styles */
@@ -45,26 +45,19 @@ html {
   body {
     background: white;
   }
-  
   .no-print {
     display: none !important;
   }
-  
   .print-break {
     page-break-after: always;
   }
-
-  /* Invoice: ensure clean print output */
   .tax-invoice {
     box-shadow: none !important;
   }
-
-  /* Hide nav/footer when printing invoice */
   body[data-page="invoice"] nav,
   body[data-page="invoice"] footer {
     display: none !important;
   }
-
   body[data-page="invoice"] main {
     padding: 0;
   }

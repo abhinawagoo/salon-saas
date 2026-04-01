@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseStaffBookingNotifyPhones } from '@/lib/phone'
 
-const MAX_LOCATIONS = 2
-
 /** GET: List all locations (admin) */
 export async function GET() {
   try {
@@ -20,16 +18,10 @@ export async function GET() {
   }
 }
 
-/** POST: Create a location (only if fewer than MAX_LOCATIONS) */
+/** POST: Create a location */
 export async function POST(request: NextRequest) {
   try {
     const count = await prisma.location.count()
-    if (count >= MAX_LOCATIONS) {
-      return NextResponse.json(
-        { error: `Only ${MAX_LOCATIONS} locations are allowed. Edit existing ones instead.` },
-        { status: 400 }
-      )
-    }
     const body = await request.json()
     const name = (body.name || '').trim()
     const address = (body.address ?? '').trim() || undefined
@@ -41,6 +33,7 @@ export async function POST(request: NextRequest) {
     const closedDatesJson = body.closedDatesJson !== undefined && body.closedDatesJson !== null
       ? String(body.closedDatesJson).trim() || null
       : null
+    const concurrentSlots = Math.max(1, Math.min(20, Number(body.concurrentSlots) || 1))
     let staffBookingNotifyPhones: string | null = null
     if (body.staffBookingNotifyPhones !== undefined) {
       const parsed =
@@ -72,6 +65,7 @@ export async function POST(request: NextRequest) {
         businessHoursJson,
         closedDatesJson,
         staffBookingNotifyPhones,
+        concurrentSlots,
         isActive: true,
       },
     })

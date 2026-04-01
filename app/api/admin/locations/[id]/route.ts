@@ -29,6 +29,9 @@ export async function PATCH(
           : parseStaffBookingNotifyPhones(JSON.stringify(body.staffBookingNotifyPhones))
       staffBookingNotifyPhones = JSON.stringify(parsed)
     }
+    const concurrentSlots = body.concurrentSlots !== undefined
+      ? Math.max(1, Math.min(20, Number(body.concurrentSlots) || 1))
+      : undefined
 
     const updateData: {
       name?: string
@@ -38,6 +41,7 @@ export async function PATCH(
       businessHoursJson?: string | null
       closedDatesJson?: string | null
       staffBookingNotifyPhones?: string | null
+      concurrentSlots?: number
     } = {}
     if (name) updateData.name = name
     if (address !== undefined) updateData.address = address
@@ -46,6 +50,7 @@ export async function PATCH(
     if (businessHoursJson !== undefined) updateData.businessHoursJson = businessHoursJson
     if (closedDatesJson !== undefined) updateData.closedDatesJson = closedDatesJson
     if (staffBookingNotifyPhones !== undefined) updateData.staffBookingNotifyPhones = staffBookingNotifyPhones
+    if (concurrentSlots !== undefined) updateData.concurrentSlots = concurrentSlots
 
     if (imageUrl !== undefined) {
       const existing = await prisma.location.findUnique({

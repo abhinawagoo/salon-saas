@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { ArrowLeft, MapPin, Plus, Edit2, Clock, CalendarX, Upload, X } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
 
-const MAX_LOCATIONS = 2
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 interface BusinessHoursDay {
@@ -23,9 +22,9 @@ interface Location {
   mobile: string | null
   imageUrl: string | null
   isActive: boolean
+  concurrentSlots?: number | null
   businessHoursJson?: string | null
   closedDatesJson?: string | null
-  /** JSON array string of 10-digit mobiles for this location's staff WhatsApp alerts */
   staffBookingNotifyPhones?: string | null
 }
 
@@ -46,6 +45,7 @@ export default function AdminLocationsPage() {
     mobile: '',
     staffBookingNotifyPhones: '',
     imageUrl: '',
+    concurrentSlots: 1,
     businessHours: defaultBusinessHours,
     closedDates: [] as string[],
   })
@@ -77,6 +77,7 @@ export default function AdminLocationsPage() {
       mobile: '',
       staffBookingNotifyPhones: '',
       imageUrl: '',
+      concurrentSlots: 1,
       businessHours: defaultBusinessHours,
       closedDates: [],
     })
@@ -128,6 +129,7 @@ export default function AdminLocationsPage() {
       mobile: loc.mobile || '',
       staffBookingNotifyPhones: staffNotifyText,
       imageUrl: loc.imageUrl || '',
+      concurrentSlots: loc.concurrentSlots ?? 1,
       businessHours,
       closedDates,
     })
@@ -193,6 +195,7 @@ export default function AdminLocationsPage() {
         mobile: form.mobile.trim() || undefined,
         staffBookingNotifyPhones: form.staffBookingNotifyPhones,
         imageUrl: form.imageUrl.trim() || undefined,
+        concurrentSlots: form.concurrentSlots,
         businessHoursJson: JSON.stringify(form.businessHours),
         closedDatesJson: JSON.stringify(form.closedDates),
       }
@@ -227,7 +230,7 @@ export default function AdminLocationsPage() {
     }
   }
 
-  const canAddMore = locations.length < MAX_LOCATIONS
+  const canAddMore = true
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -240,7 +243,7 @@ export default function AdminLocationsPage() {
               </Link>
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Locations</h1>
-                <p className="text-sm text-gray-500">Max {MAX_LOCATIONS}. Names appear in booking and invoices.</p>
+                <p className="text-sm text-gray-500">Manage all your salon locations. Names appear in booking and invoices.</p>
               </div>
             </div>
             {canAddMore && (
@@ -264,7 +267,7 @@ export default function AdminLocationsPage() {
           ) : locations.length === 0 ? (
             <div className="p-8 text-center">
               <MapPin className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="text-gray-500 mb-4">No locations yet. Add up to {MAX_LOCATIONS} salon locations.</p>
+              <p className="text-gray-500 mb-4">No locations yet. Add your salon locations.</p>
               {canAddMore && (
                 <button
                   onClick={openAdd}
@@ -349,6 +352,23 @@ export default function AdminLocationsPage() {
                   placeholder="e.g. 9876543210"
                 />
                 <p className="text-xs text-gray-500 mt-1">Shown on bills for this branch.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Simultaneous Appointments</label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Max clients served at the same time at this location. Set to 2 if you have 2 chairs/staff working in parallel, etc.
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={form.concurrentSlots}
+                    onChange={(e) => setForm((f) => ({ ...f, concurrentSlots: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)) }))}
+                    className="w-24 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  />
+                  <span className="text-sm text-gray-500">client(s) at once</span>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Staff WhatsApp — booking alerts (optional)</label>

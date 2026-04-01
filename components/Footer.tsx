@@ -3,188 +3,102 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Mail, Phone, ExternalLink } from 'lucide-react'
+import { Instagram, Facebook } from 'lucide-react'
 
-const BRAND_NAME = 'Shahnaz Salon'
-const WEBSITE_URL = 'https://www.shahnazsalonsasaram.com'
-const SUPPORT_EMAIL = 'support@shahnazsalonsasaram.com'
+interface SiteSettings {
+  facebookUrl?: string | null
+  instagramUrl?: string | null
+}
 
 export default function Footer() {
   const pathname = usePathname()
-  const [aboutOpen, setAboutOpen] = useState(false)
-  const [quickLinksOpen, setQuickLinksOpen] = useState(false)
-  const [socialLinks, setSocialLinks] = useState<{ name: string; href: string; icon: string }[]>([])
+  const [settings, setSettings] = useState<SiteSettings>({})
 
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
-      .then((s) => {
-        const links: { name: string; href: string; icon: string }[] = []
-        if (s.facebookUrl) links.push({ name: 'Facebook', href: s.facebookUrl, icon: 'f' })
-        if (s.instagramUrl) links.push({ name: 'Instagram', href: s.instagramUrl, icon: '📷' })
-        setSocialLinks(links)
-      })
+      .then((data) => setSettings(data))
       .catch(() => {})
   }, [])
 
-  if (pathname?.startsWith('/booking')) {
-    return null
-  }
+  if (pathname?.startsWith('/booking') || pathname?.startsWith('/login')) return null
 
   return (
-    <footer className="bg-[#F8F3FA] text-gray-700 mt-auto border-t border-[#E6D6E6]/70">
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        {/* Accordion: About */}
-        <div className="border-b border-[#E6D6E6]/60">
-          <button
-            type="button"
-            onClick={() => setAboutOpen((o) => !o)}
-            className="w-full flex items-center justify-between py-4 text-left font-medium text-gray-800"
-          >
-            <span>About {BRAND_NAME}</span>
-            <ChevronDown
-              size={20}
-              className={`transition-transform ${aboutOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          {aboutOpen && (
-            <div className="pb-4 text-sm text-gray-600 space-y-2">
-              <p>
-                {BRAND_NAME} offers premium salon services. Book your appointment online for a seamless experience.
-              </p>
-              <a
-                href={WEBSITE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[#A24D89] hover:text-[#8B3D75] hover:underline"
-              >
-                {WEBSITE_URL.replace(/^https?:\/\//, '')}
-                <ExternalLink size={14} />
-              </a>
-            </div>
-          )}
-        </div>
+    <footer className="bg-charcoal-dark border-t border-white/5">
+      <div className="max-w-4xl mx-auto px-6 py-12 sm:py-16">
 
-        {/* Accordion: Quick Links */}
-        <div className="border-b border-[#E6D6E6]/60">
-          <button
-            type="button"
-            onClick={() => setQuickLinksOpen((o) => !o)}
-            className="w-full flex items-center justify-between py-4 text-left font-medium text-gray-800"
-          >
-            <span>Quick Links</span>
-            <ChevronDown
-              size={20}
-              className={`transition-transform ${quickLinksOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          {quickLinksOpen && (
-            <nav className="pb-4 flex flex-col gap-2 text-sm">
-              <Link href="/" className="text-gray-600 hover:text-gray-900">
-                Home
-              </Link>
-              <Link href="/services" className="text-gray-600 hover:text-gray-900">
-                Services
-              </Link>
-              <Link href="/gallery" className="text-gray-600 hover:text-gray-900">
-                Gallery
-              </Link>
-              <Link href="/contact" className="text-gray-600 hover:text-gray-900">
-                Contact
-              </Link>
-              <Link href="/best-ladies-salon-in-sasaram-bihar" className="text-gray-600 hover:text-gray-900">
-                Best Ladies Salon Sasaram
-              </Link>
-              <Link href="/bridal-makeup-sasaram" className="text-gray-600 hover:text-gray-900">
-                Bridal Makeup Sasaram
-              </Link>
-              <Link href="/facial-services-sasaram" className="text-gray-600 hover:text-gray-900">
-                Facial Services Sasaram
-              </Link>
-              <Link href="/hair-styling-sasaram" className="text-gray-600 hover:text-gray-900">
-                Hair Styling Sasaram
-              </Link>
-              <Link href="/beauty-parlour-sasaram" className="text-gray-600 hover:text-gray-900">
-                Beauty Parlour Sasaram
-              </Link>
-              <Link href="/booking/location" className="text-gray-600 hover:text-gray-900">
-                Book Appointment
-              </Link>
-              <Link href="/terms" className="text-gray-600 hover:text-gray-900">
-                Terms &amp; Conditions
-              </Link>
-              <Link href="/privacy" className="text-gray-600 hover:text-gray-900">
-                Privacy Policy
-              </Link>
-              <Link href="/refund" className="text-gray-600 hover:text-gray-900">
-                Refund &amp; Cancellation
-              </Link>
-            </nav>
-          )}
-        </div>
-
-        {/* Support box */}
-        <div className="mt-4 p-4 rounded-xl bg-white/80 border border-[#E6D6E6]/60 text-center shadow-sm">
-          <p className="text-sm font-medium text-gray-800 mb-1">
-            Facing issues? Reach us at:
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a
-              href="tel:+918877799982"
-              className="inline-flex items-center gap-1.5 text-[#A24D89] font-medium hover:text-[#8B3D75] hover:underline"
-            >
-              <Phone size={16} />
-              +91 8877799982
-            </a>
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className="inline-flex items-center gap-1.5 text-[#A24D89] font-medium hover:text-[#8B3D75] hover:underline"
-            >
-              <Mail size={16} />
-              {SUPPORT_EMAIL}
-            </a>
+        {/* Brand */}
+        <div className="text-center mb-10">
+          <div className="font-serif text-white text-2xl sm:text-3xl font-light tracking-[0.35em] uppercase leading-none">
+            Valessio
           </div>
+          <div className="text-gold text-[9px] tracking-[0.55em] uppercase font-sans font-light mt-1">
+            Paris
+          </div>
+          <p className="text-white/30 text-xs tracking-widest uppercase font-sans font-light mt-4">
+            Luxury Beauty Experience
+          </p>
         </div>
 
-        {/* Social: Instagram & Facebook (from admin customize) */}
-        {socialLinks.length > 0 && (
-        <div className="mt-6 flex justify-center gap-4">
-          {socialLinks.map((social) => (
-            <a
-              key={social.name}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full border-2 border-[#D8B0CF]/70 flex items-center justify-center text-gray-600 hover:border-[#A24D89] hover:text-gray-900 transition-colors"
-              aria-label={social.name}
+        {/* Divider */}
+        <div className="flex items-center gap-4 mb-10">
+          <div className="flex-1 h-px bg-white/10" />
+          <div className="w-1 h-1 rounded-full bg-gold/50" />
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        {/* Links */}
+        <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10">
+          {[
+            { href: '/services', label: 'Services' },
+            { href: '/gallery', label: 'Gallery' },
+            { href: '/contact', label: 'Contact' },
+            { href: '/booking/location', label: 'Book Now' },
+            { href: '/privacy', label: 'Privacy' },
+            { href: '/terms', label: 'Terms' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-white/40 hover:text-white/80 text-[10px] tracking-[0.25em] uppercase font-sans font-light transition-colors"
             >
-              <span className="text-sm font-semibold">{social.icon}</span>
-            </a>
+              {item.label}
+            </Link>
           ))}
         </div>
+
+        {/* Social */}
+        {(settings.instagramUrl || settings.facebookUrl) && (
+          <div className="flex justify-center gap-4 mb-10">
+            {settings.instagramUrl && (
+              <a
+                href={settings.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram size={16} />
+              </a>
+            )}
+            {settings.facebookUrl && (
+              <a
+                href={settings.facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-gold hover:border-gold/40 transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook size={16} />
+              </a>
+            )}
+          </div>
         )}
 
         {/* Copyright */}
-        <div className="mt-8 pt-6 border-t border-[#E6D6E6]/60 text-center text-xs text-gray-500 leading-relaxed">
-          <p>
-            Copyright 2017–2025 © {BRAND_NAME} | {WEBSITE_URL.replace(/^https?:\/\//, '')}
-          </p>
-          <p className="mt-1">
-            <Link href="/terms" className="hover:text-gray-700 underline">
-              Terms &amp; Conditions
-            </Link>
-            {' · '}
-            <Link href="/privacy" className="hover:text-gray-700 underline">
-              Privacy Policy
-            </Link>
-            {' · '}
-            <Link href="/refund" className="hover:text-gray-700 underline">
-              Refund &amp; Cancellation
-            </Link>
-            {' · '}
-            Powered by {BRAND_NAME}
-          </p>
-        </div>
+        <p className="text-center text-white/20 text-[10px] tracking-widest uppercase font-sans">
+          © {new Date().getFullYear()} Valessio Paris. All rights reserved.
+        </p>
       </div>
     </footer>
   )

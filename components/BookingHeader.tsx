@@ -25,26 +25,25 @@ export default function BookingHeader() {
     window.location.href = '/'
   }
 
-  // Don't show on invoice (token-based, no nav)
   if (pathname?.startsWith('/booking/invoice')) return null
   if (authDisabled || !user) return null
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-end gap-2">
+    <div className="bg-charcoal-dark border-b border-white/5 px-4 py-2 flex items-center justify-end gap-2">
       <Link
         href="/profile"
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/50 hover:text-white text-xs font-sans tracking-widest uppercase transition-colors"
       >
-        <User size={18} />
+        <User size={14} className="text-gold" />
         <span className="hidden sm:inline">Profile</span>
       </Link>
       <button
         type="button"
         onClick={handleLogout}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/50 hover:text-white text-xs font-sans tracking-widest uppercase transition-colors"
       >
-        <LogOut size={18} />
-        <span className="hidden sm:inline">Logout</span>
+        <LogOut size={14} />
+        <span className="hidden sm:inline">Sign Out</span>
       </button>
     </div>
   )

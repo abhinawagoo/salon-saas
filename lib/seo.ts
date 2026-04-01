@@ -1,34 +1,27 @@
-/**
- * SEO configuration for Shahsharam Salon – Sasaram, Bihar
- * Update these values to match your production domain and details.
- */
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.shahnazsalonsasaram.com'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.valessioparis.com'
 
 export const SEO = {
-  siteName: 'Shahsharam Salon',
-  title: "Shahsharam Salon – Best Salon & Beauty Parlour in Sasaram Bihar",
+  siteName: 'Valessio Paris',
+  title: 'Valessio Paris – Luxury Salon & Beauty',
   description:
-    "Shahsharam Salon is a professional salon and beauty parlour in Sasaram, Bihar offering haircuts, styling, grooming, and hair spa services. Visit the best salon in Sasaram today.",
+    'Valessio Paris is a luxury salon offering world-class hair styling, skincare, and beauty treatments. Book your appointment today.',
   keywords:
-    'Shahsharam Salon Sasaram, Best Salon in Sasaram Bihar, Beauty Parlour Sasaram, Salon Sasaram, Haircut Sasaram, Hair Styling Sasaram, Hair Spa Sasaram, Salon near me Sasaram',
-  ogTitle: "Shahsharam Salon – Best Salon in Sasaram Bihar",
-  ogDescription: 'Professional salon and beauty parlour services in Sasaram Bihar.',
-  telephone: '+918877799982',
+    'Valessio Paris, luxury salon, beauty parlour, hair styling, facial, bridal makeup, premium salon',
+  ogTitle: 'Valessio Paris – Luxury Salon & Beauty',
+  ogDescription: 'World-class hair, skincare, and beauty treatments at Valessio Paris.',
+  telephone: '',
   address: {
-    locality: 'Sasaram',
-    region: 'Bihar',
-    postalCode: '821115',
+    locality: '',
+    region: '',
+    postalCode: '',
     country: 'IN',
   },
-  areaServed: 'Sasaram Bihar',
-  priceRange: '₹₹',
-  openingHours: 'Mo-Su 09:00-21:00',
-  bannerAlt: "Shahsharam Salon best salon and beauty parlour in Sasaram Bihar",
-  galleryAlt: 'Professional haircut at Shahsharam Salon Sasaram',
+  areaServed: '',
+  priceRange: '₹₹₹',
+  openingHours: 'Mo-Su 10:00-20:00',
+  bannerAlt: 'Valessio Paris – Luxury Salon',
+  galleryAlt: 'Valessio Paris salon experience',
   baseUrl: BASE_URL.replace(/\/$/, ''),
-  /** Used in structured data and og:image. Add /public/banner.jpg or set ogImageUrl in production. */
   ogImageUrl: `${BASE_URL.replace(/\/$/, '')}/banner.jpg`,
-  /** Logo for Google Knowledge Panel – use square image (min 112×112px). Add /public/logo.png or set NEXT_PUBLIC_LOGO_URL */
   logoUrl: process.env.NEXT_PUBLIC_LOGO_URL || `${BASE_URL.replace(/\/$/, '')}/favicon.png`,
 }
