@@ -130,8 +130,12 @@ export async function POST(request: Request) {
     const totalDurationMinutes = calcParallelDurationMinutes(personDurations)
 
     // Validate: day is open and time is within business hours (per location)
-    const bookingDate = new Date(date)
-    const dayOfWeek = bookingDate.getDay()
+    // Normalise date to YYYY-MM-DD for UTC-safe handling throughout
+    const dateStr = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? date
+      : new Date(date).toISOString().slice(0, 10)
+    const bookingDate = new Date(`${dateStr}T00:00:00.000Z`)
+    const dayOfWeek = bookingDate.getUTCDay()
     const locationWithHours = await prisma.location.findUnique({
       where: { id: locationId },
       select: { businessHoursJson: true, closedDatesJson: true },
@@ -146,8 +150,7 @@ export async function POST(request: Request) {
         return []
       }
     })()
-    const bookingDateStr = bookingDate.toISOString().slice(0, 10)
-    if (closedDates.includes(bookingDateStr)) {
+    if (closedDates.includes(dateStr)) {
       return NextResponse.json(
         { error: 'The salon is closed on this date. Please choose another date.' },
         { status: 400 }
@@ -168,12 +171,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Build occupancy for this date: each existing booking occupies [timeSlot, timeSlot + duration)
-    const bookingDateObj = new Date(date)
-    const startOfBookingDate = new Date(bookingDateObj)
-    startOfBookingDate.setHours(0, 0, 0, 0)
-    const endOfBookingDate = new Date(bookingDateObj)
-    endOfBookingDate.setHours(23, 59, 59, 999)
+    // Build occupancy for this date — UTC-anchored range matches how bookings are stored
+    const startOfBookingDate = new Date(`${dateStr}T00:00:00.000Z`)
+    const endOfBookingDate   = new Date(`${dateStr}T23:59:59.999Z`)
 
     const [existingBookings, locationCapacity] = await Promise.all([
       prisma.booking.findMany({
@@ -250,7 +250,7 @@ export async function POST(request: Request) {
       data: {
         locationId,
         userId: user.id,
-        date: new Date(date),
+        date: new Date(`${dateStr}T00:00:00.000Z`),
         timeSlot,
         durationMinutes: totalDurationMinutes,
         groupSize: bookingGroupSize,

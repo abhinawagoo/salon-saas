@@ -103,7 +103,7 @@ function InvoicePageContent() {
   const dateObj = typeof bookingData.date === 'string' ? new Date(bookingData.date) : new Date(bookingData.date)
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 overflow-x-hidden">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 overflow-x-hidden print:min-h-0 print:bg-white print:py-0 print:px-0">
       <div className="max-w-[800px] mx-auto min-w-0">
         <div className="text-center mb-6 print:hidden">
           <h1 className="text-2xl font-bold text-gray-900">Your booking & bill</h1>

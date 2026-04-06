@@ -53,7 +53,7 @@ export default function DateTimePage() {
 
   const handleSelect = (date: Date, timeSlot: string) => {
     sessionStorage.setItem('bookingDateTime', JSON.stringify({
-      date: date.toISOString(),
+      date: format(date, 'yyyy-MM-dd'),
       timeSlot
     }))
     router.push('/booking/customer')

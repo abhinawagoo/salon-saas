@@ -120,6 +120,13 @@ export default function AdminDashboard() {
                 Bookings
               </Link>
               <Link
+                href="/admin/calendar"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors min-h-[44px] border border-amber-200"
+              >
+                <Calendar size={18} />
+                Calendar
+              </Link>
+              <Link
                 href="/admin/payment-settings"
                 className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-medium transition-colors min-h-[44px]"
               >

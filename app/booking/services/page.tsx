@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { format, startOfDay, endOfDay, addDays } from 'date-fns'
 import ServiceCard from '@/components/ServiceCard'
 import ServiceModal from '@/components/ServiceModal'
-import { ChevronRight, Users, User } from 'lucide-react'
+import { ChevronRight, Users, User, Phone } from 'lucide-react'
 import { parseBusinessHours, getDayConfig, isWithinClosingTime } from '@/lib/slots'
 
 interface Service {
@@ -55,6 +55,7 @@ export default function BookingServicesPage() {
   const [loading, setLoading] = useState(true)
   const [showClosingTimePopup, setShowClosingTimePopup] = useState(false)
   const [businessHoursJson, setBusinessHoursJson] = useState<string | null>(null)
+  const [locationMobile, setLocationMobile] = useState<string | null>(null)
   const [totalBump, setTotalBump] = useState(false)
 
   // Group booking state
@@ -135,7 +136,8 @@ export default function BookingServicesPage() {
 
     const loc = sessionStorage.getItem('bookingLocation')
     if (loc) {
-      const { id } = JSON.parse(loc) as { id: string }
+      const { id, mobile } = JSON.parse(loc) as { id: string; mobile?: string | null }
+      if (mobile) setLocationMobile(mobile)
       const startDate = format(startOfDay(new Date()), 'yyyy-MM-dd')
       const endDate = format(endOfDay(addDays(new Date(), 30)), 'yyyy-MM-dd')
       fetch(`/api/slots/availability?startDate=${startDate}&endDate=${endDate}&locationId=${encodeURIComponent(id)}`)
@@ -483,6 +485,15 @@ export default function BookingServicesPage() {
               <button type="button" onClick={() => setShowClosingTimePopup(false)} className="w-full py-3 border border-ivory text-charcoal-dark rounded-xl font-sans text-sm">
                 Reduce services
               </button>
+              {locationMobile && (
+                <a
+                  href={`tel:${locationMobile}`}
+                  className="w-full py-3 flex items-center justify-center gap-2 border border-gold/40 text-gold rounded-xl font-sans text-sm bg-gold/5 hover:bg-gold/10 transition-colors"
+                >
+                  <Phone size={15} />
+                  Call salon for custom booking
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -41,6 +41,11 @@ button, a {
 }
 
 /* Print styles */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
   body {
     background: white;
@@ -53,12 +58,22 @@ button, a {
   }
   .tax-invoice {
     box-shadow: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
   body[data-page="invoice"] nav,
   body[data-page="invoice"] footer {
     display: none !important;
   }
   body[data-page="invoice"] main {
-    padding: 0;
+    padding: 0 !important;
+  }
+  /* Ensure text sizes match desktop in print */
+  .tax-invoice .text-xs {
+    font-size: 0.75rem !important;
+  }
+  .tax-invoice .text-sm,
+  .tax-invoice .sm\:text-sm {
+    font-size: 0.875rem !important;
   }
 }

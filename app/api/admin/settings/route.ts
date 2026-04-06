@@ -98,9 +98,9 @@ async function updateSettings(request: Request) {
     const body = await request.json()
     const { brandName, menuLabel, heroVideoUrls, galleryImageUrls, invoiceWebsite, invoiceGst, invoiceUpiId, invoiceTerms, invoiceSignatureUrl, facebookUrl, instagramUrl } = body
 
-    const heroArr = Array.isArray(heroVideoUrls) ? heroVideoUrls.slice(0, 5) : []
+    const heroArr = Array.isArray(heroVideoUrls) ? heroVideoUrls.slice(0, 20) : []
     const galleryArr = Array.isArray(galleryImageUrls)
-      ? galleryImageUrls.filter((u): u is string => typeof u === 'string' && u.length > 0).slice(0, 5)
+      ? galleryImageUrls.filter((u): u is string => typeof u === 'string' && u.length > 0).slice(0, 50)
       : []
 
     // Delete from R2 any gallery/hero URLs that were removed (best-effort; don't fail save)

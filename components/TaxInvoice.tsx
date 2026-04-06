@@ -60,8 +60,8 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
     <div
       className="tax-invoice bg-white text-gray-800 rounded-lg overflow-hidden w-full max-w-[800px] mx-auto box-border border border-[#E5E0D8] px-4 py-5 sm:px-6 sm:py-6"
     >
-      {/* Header - stack on mobile, row on desktop */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start sm:gap-8 mb-2">
+      {/* Header - stack on mobile, row on desktop/print */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start sm:gap-8 mb-2 print:flex-row print:justify-between print:items-start print:gap-8">
         <div className="flex gap-3 sm:gap-4">
           {data.logoUrl && (
             <img
@@ -101,7 +101,7 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
       </div>
 
       {/* Info Row */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 text-xs sm:text-sm mt-2 sm:mt-2 mb-2 sm:mb-2">
+      <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 text-xs sm:text-sm mt-2 sm:mt-2 mb-2 sm:mb-2 print:flex-row print:flex-wrap print:items-center print:gap-x-4 print:text-sm">
         <span className="font-medium text-gray-700">Invoice No: {data.invoiceNo}</span>
         <span className="font-medium text-gray-700">Invoice Date: {data.invoiceDate}</span>
         {data.appointmentTime && (
@@ -120,8 +120,8 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
 
       {/* Mobile: Card layout for services | Desktop: Table */}
       <div className="mb-4 sm:mb-5">
-        {/* Mobile card layout - visible only on small screens */}
-        <div className="md:hidden space-y-3">
+        {/* Mobile card layout - visible only on small screens, hidden in print */}
+        <div className="md:hidden print:hidden space-y-3">
               {data.services.map((s, i) => {
                 const qty = getQty(s)
                 const taxable = Math.round((s.price / (1 + GST_RATE)) * 100) / 100
@@ -150,8 +150,8 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
           </div>
         </div>
 
-        {/* Desktop table - hidden on mobile */}
-        <div className="hidden md:block overflow-x-auto">
+        {/* Desktop table - hidden on mobile, always shown in print */}
+        <div className="hidden md:block print:block overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[560px]" style={{ border: '1px solid #E5E0D8', borderRadius: 8, overflow: 'hidden', tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ backgroundColor: '#F3EEE6' }}>
@@ -194,8 +194,8 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
         </div>
       </div>
 
-      {/* Bottom: Terms (left) | Totals (right) - stack on mobile */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:gap-8 mt-4 sm:mt-5 mb-6 sm:mb-6">
+      {/* Bottom: Terms (left) | Totals (right) - stack on mobile, row in print */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:gap-8 mt-4 sm:mt-5 mb-6 sm:mb-6 print:flex-row print:justify-between print:gap-8">
         <div className="flex-1 sm:max-w-md min-w-0">
           <p className="text-xs font-medium text-gray-600 mb-1">Terms & Conditions</p>
           {terms && <p className="text-xs sm:text-sm text-gray-600 break-words">{terms}</p>}

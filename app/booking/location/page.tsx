@@ -9,6 +9,7 @@ interface Location {
   name: string
   slug: string
   address: string | null
+  mobile?: string | null
   imageUrl?: string | null
 }
 
@@ -33,7 +34,7 @@ export default function LocationPage() {
   }, [router])
 
   const handleSelect = (location: Location) => {
-    sessionStorage.setItem('bookingLocation', JSON.stringify({ id: location.id, name: location.name, address: location.address }))
+    sessionStorage.setItem('bookingLocation', JSON.stringify({ id: location.id, name: location.name, address: location.address, mobile: location.mobile ?? null }))
     router.push('/booking/date-time')
   }
 

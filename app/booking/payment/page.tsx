@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { format, startOfDay, endOfDay, addDays, subMinutes, parseISO } from 'date-fns'
 import PaymentScreen, { type ResolvedPaymentOption, type PaymentType } from '@/components/PaymentScreen'
 import { parseBusinessHours, getDayConfig, isWithinClosingTime } from '@/lib/slots'
+import { Phone } from 'lucide-react'
 
 const ARRIVAL_BUFFER_MINUTES = 10
 
@@ -28,6 +29,7 @@ function PaymentPageContent() {
   const [totalBump, setTotalBump] = useState(false)
   const [showClosingTimePopup, setShowClosingTimePopup] = useState(false)
   const [showArrivalPopup, setShowArrivalPopup] = useState(false)
+  const [locationMobile, setLocationMobile] = useState<string | null>(null)
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType | null>(null)
   const [paymentOptions, setPaymentOptions] = useState<ResolvedPaymentOption[]>([])
   const [businessHoursJson, setBusinessHoursJson] = useState<string | null>(null)
@@ -121,7 +123,8 @@ function PaymentPageContent() {
       .catch(() => {})
 
     // Fetch business hours for closing-time validation
-    const loc = JSON.parse(location) as { id: string }
+    const loc = JSON.parse(location) as { id: string; mobile?: string | null }
+    if (loc.mobile) setLocationMobile(loc.mobile)
     const dt = JSON.parse(dateTime) as { date: string; timeSlot: string }
     const startDate = format(startOfDay(new Date()), 'yyyy-MM-dd')
     const endDate = format(endOfDay(addDays(new Date(), 30)), 'yyyy-MM-dd')
@@ -422,6 +425,15 @@ function PaymentPageContent() {
                     >
                       Reduce services
                     </button>
+                    {locationMobile && (
+                      <a
+                        href={`tel:${locationMobile}`}
+                        className="w-full py-2.5 flex items-center justify-center gap-2 border border-gray-300 text-gray-700 rounded-lg font-medium bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <Phone size={15} />
+                        Call salon for custom booking
+                      </a>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowClosingTimePopup(false)}

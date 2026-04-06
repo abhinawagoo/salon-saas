@@ -19,9 +19,10 @@ model User {
   marketingConsent Boolean  @default(true) // newsletters, promotions via Email, SMS, WhatsApp
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
-  bookings      Booking[]
-  conversations WhatsAppConversation[]
+
+  bookings         Booking[] @relation("CustomerBookings")
+  assignedBookings Booking[] @relation("StaffAssigned")
+  conversations    WhatsAppConversation[]
 }
 
 // OTP for mobile login/signup; expires in 10 min
@@ -109,7 +110,9 @@ model Booking {
   locationId      String?   // Required for new bookings; null for legacy
   location        Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  user            User      @relation("CustomerBookings", fields: [userId], references: [id])
+  staffId         String?   // Assigned staff member (User with role=STAFF); null = unassigned
+  staff           User?     @relation("StaffAssigned", fields: [staffId], references: [id])
   date            DateTime
   timeSlot        String   // e.g., "10:00", "11:00"
   durationMinutes Int      @default(30) // Total service duration at booking time (blocks slots until start + duration)
@@ -120,7 +123,7 @@ model Booking {
   billNo          String?  // Serial bill number (e.g. BILL-000001), assigned on first invoice generation
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   services BookingService[]
   payment  Payment?
 }

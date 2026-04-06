@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Upload, X, Save, Image as ImageIcon, MapPin, ChevronRight, Video, Share2 } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
 
-const MAX_IMAGES = 5
+const MAX_IMAGES = 50
 const SHOW_HERO_BANNER_UPLOAD = false // Hidden until upload is fixed
 
 interface Settings {
