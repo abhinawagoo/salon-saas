@@ -49,10 +49,11 @@ export default function HomeClient() {
       .finally(() => setLoading(false))
   }, [])
 
-  const bannerSlides = [
-    ...(settings.heroBannerImageUrl ? [{ imageUrl: settings.heroBannerImageUrl, alt: SEO.bannerAlt }] : []),
-    ...(settings.galleryImageUrls?.slice(0, 4) ?? []).map((url) => ({ imageUrl: url, alt: SEO.galleryAlt })),
-  ]
+  const heroMediaUrl = settings.heroBannerImageUrl ?? null
+  const heroIsVideo = heroMediaUrl ? /\.mp4(\?|$)/i.test(heroMediaUrl) : false
+  const bannerSlides = heroMediaUrl && !heroIsVideo
+    ? [{ imageUrl: heroMediaUrl, alt: SEO.bannerAlt }]
+    : []
 
   if (loading) {
     return (
@@ -69,7 +70,16 @@ export default function HomeClient() {
     <>
       {/* Hero */}
       <div className="relative h-[calc(100vh-64px)] overflow-hidden bg-charcoal-dark">
-        {bannerSlides.length > 0 ? (
+        {heroIsVideo && heroMediaUrl ? (
+          <video
+            src={heroMediaUrl}
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            muted
+            playsInline
+            loop
+          />
+        ) : bannerSlides.length > 0 ? (
           <div className="absolute inset-0">
             <HomeLandingBanner slides={bannerSlides} />
           </div>
@@ -117,18 +127,18 @@ export default function HomeClient() {
 
       {/* Our Work */}
       {videos.length > 0 && (
-        <section className="bg-cream py-10 sm:py-14 px-4">
-          <div className="max-w-sm mx-auto">
-            <div className="flex items-center gap-3 justify-center mb-8">
-              <div className="h-px flex-1 bg-charcoal-dark/10" />
-              <Sparkles size={11} className="text-gold" />
-              <p className="text-[10px] tracking-[0.4em] uppercase font-sans text-stone">Our Work</p>
-              <Sparkles size={11} className="text-gold" />
-              <div className="h-px flex-1 bg-charcoal-dark/10" />
-            </div>
-            <div className="rounded-2xl overflow-hidden aspect-[9/16] max-h-[72vh]">
-              <HomeVideoCarousel videos={videos} />
-            </div>
+        <section className="bg-cream py-10 sm:py-14">
+          {/* Title — stays centered */}
+          <div className="flex items-center gap-3 justify-center mb-8 px-4 max-w-sm mx-auto">
+            <div className="h-px flex-1 bg-charcoal-dark/10" />
+            <Sparkles size={11} className="text-gold" />
+            <p className="text-[10px] tracking-[0.4em] uppercase font-sans text-stone">Our Work</p>
+            <Sparkles size={11} className="text-gold" />
+            <div className="h-px flex-1 bg-charcoal-dark/10" />
+          </div>
+          {/* Slider — full viewport width so multiple cards show */}
+          <div className="h-[440px] sm:h-[500px] lg:h-[540px]">
+            <HomeVideoCarousel videos={videos} />
           </div>
         </section>
       )}

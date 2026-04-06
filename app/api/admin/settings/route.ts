@@ -14,7 +14,7 @@ function parseJsonArray(str: string | null): string[] {
   }
 }
 
-type SettingsRow = { brandName: string; menuLabel: string; heroVideoUrls: string | null; galleryImageUrls: string | null; invoiceWebsite: string | null; invoiceGst: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl: string | null; facebookUrl: string | null; instagramUrl: string | null }
+type SettingsRow = { brandName: string; menuLabel: string; heroBannerImageUrl?: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null; invoiceWebsite: string | null; invoiceGst: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl: string | null; facebookUrl: string | null; instagramUrl: string | null }
 
 const defaultSettings = {
   brandName: 'Salon',
@@ -36,7 +36,7 @@ export async function GET() {
     let rows: SettingsRow[]
     try {
       rows = await prisma.$queryRaw<SettingsRow[]>`
-        SELECT "brandName", "menuLabel", "heroVideoUrls", "galleryImageUrls",
+        SELECT "brandName", "menuLabel", "heroBannerImageUrl", "heroVideoUrls", "galleryImageUrls",
           "invoiceWebsite", "invoiceGst", "invoiceUpiId", "invoiceTerms", "invoiceSignatureUrl",
           "facebookUrl", "instagramUrl"
         FROM "SiteCustomization" WHERE id = 1 LIMIT 1
@@ -76,7 +76,7 @@ export async function GET() {
     return NextResponse.json({
       brandName: s.brandName,
       menuLabel: s.menuLabel,
-      heroBannerImageUrl: null,
+      heroBannerImageUrl: s.heroBannerImageUrl ?? null,
       heroVideoUrls: parseJsonArray(s.heroVideoUrls),
       galleryImageUrls: parseJsonArray(s.galleryImageUrls),
       invoiceWebsite: s.invoiceWebsite ?? null,
@@ -96,8 +96,9 @@ export async function GET() {
 async function updateSettings(request: Request) {
   try {
     const body = await request.json()
-    const { brandName, menuLabel, heroVideoUrls, galleryImageUrls, invoiceWebsite, invoiceGst, invoiceUpiId, invoiceTerms, invoiceSignatureUrl, facebookUrl, instagramUrl } = body
+    const { brandName, menuLabel, heroBannerImageUrl, heroVideoUrls, galleryImageUrls, invoiceWebsite, invoiceGst, invoiceUpiId, invoiceTerms, invoiceSignatureUrl, facebookUrl, instagramUrl } = body
 
+    const heroBanner = heroBannerImageUrl !== undefined ? (typeof heroBannerImageUrl === 'string' && heroBannerImageUrl.trim() ? heroBannerImageUrl.trim() : null) : undefined
     const heroArr = Array.isArray(heroVideoUrls) ? heroVideoUrls.slice(0, 20) : []
     const galleryArr = Array.isArray(galleryImageUrls)
       ? galleryImageUrls.filter((u): u is string => typeof u === 'string' && u.length > 0).slice(0, 50)
@@ -105,22 +106,24 @@ async function updateSettings(request: Request) {
 
     // Delete from R2 any gallery/hero URLs that were removed (best-effort; don't fail save)
     try {
-      const existing = await prisma.siteCustomization.findUnique({
-        where: { id: 1 },
-        select: { heroVideoUrls: true, galleryImageUrls: true },
-      })
-      if (existing) {
-        const oldHero = parseJsonArray(existing.heroVideoUrls)
-        const oldGallery = parseJsonArray(existing.galleryImageUrls)
+      const existing = await prisma.$queryRaw<{ heroBannerImageUrl: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null }[]>`
+        SELECT "heroBannerImageUrl", "heroVideoUrls", "galleryImageUrls"
+        FROM "SiteCustomization" WHERE id = 1 LIMIT 1
+      `
+      if (existing.length) {
+        const e = existing[0]
+        const oldHero = parseJsonArray(e.heroVideoUrls)
+        const oldGallery = parseJsonArray(e.galleryImageUrls)
         const removedHero = oldHero.filter((u) => !heroArr.includes(u))
         const removedGallery = oldGallery.filter((u) => !galleryArr.includes(u))
+        // Clean up old hero banner if replaced or removed
+        const oldBanner = e.heroBannerImageUrl
+        if (oldBanner && heroBanner !== undefined && oldBanner !== heroBanner) {
+          try { await deleteFromR2ByUrl(oldBanner) } catch { /* ignore */ }
+        }
         for (const url of [...removedHero, ...removedGallery]) {
           if (url && typeof url === 'string') {
-            try {
-              await deleteFromR2ByUrl(url)
-            } catch {
-              // Ignore per-URL failures; save should succeed
-            }
+            try { await deleteFromR2ByUrl(url) } catch { /* ignore */ }
           }
         }
       }
@@ -143,6 +146,7 @@ async function updateSettings(request: Request) {
         id: 1,
         brandName: brand,
         menuLabel: menu,
+        heroBannerImageUrl: heroBanner ?? null,
         heroVideoUrls: JSON.stringify(heroArr),
         galleryImageUrls: JSON.stringify(galleryArr),
         invoiceWebsite: invWeb ?? null,
@@ -158,6 +162,7 @@ async function updateSettings(request: Request) {
         menuLabel: menu,
         heroVideoUrls: JSON.stringify(heroArr),
         galleryImageUrls: JSON.stringify(galleryArr),
+        ...(heroBanner !== undefined && { heroBannerImageUrl: heroBanner }),
         ...(invWeb !== undefined && { invoiceWebsite: invWeb }),
         ...(invGst !== undefined && { invoiceGst: invGst }),
         ...(invUpi !== undefined && { invoiceUpiId: invUpi }),
@@ -172,7 +177,7 @@ async function updateSettings(request: Request) {
     return NextResponse.json({
       brandName: r?.brandName ?? 'Salon',
       menuLabel: r?.menuLabel ?? 'Services',
-      heroBannerImageUrl: null,
+      heroBannerImageUrl: r?.heroBannerImageUrl ?? null,
       heroVideoUrls: parseJsonArray(r?.heroVideoUrls ?? null),
       galleryImageUrls: parseJsonArray(r?.galleryImageUrls ?? null),
       invoiceWebsite: r?.invoiceWebsite ?? null,

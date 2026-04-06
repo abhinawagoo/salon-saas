@@ -6,7 +6,6 @@ import { ArrowLeft, Upload, X, Save, Image as ImageIcon, MapPin, ChevronRight, V
 import { setUserRole } from '@/lib/auth'
 
 const MAX_IMAGES = 50
-const SHOW_HERO_BANNER_UPLOAD = false // Hidden until upload is fixed
 
 interface Settings {
   brandName: string
@@ -91,15 +90,35 @@ export default function AdminCustomizePage() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const isVideo = file.type === 'video/mp4'
+    const isImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+    if (!isVideo && !isImage) {
+      alert('Please select a JPEG, PNG, WebP image or MP4 video.')
+      e.target.value = ''
+      return
+    }
     setUploadingBanner(true)
     try {
       const formData = new FormData()
       formData.set('file', file)
       formData.set('type', 'hero')
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      setSettings((s) => ({ ...s, heroBannerImageUrl: data.url || null }))
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('File too large. Please use a smaller file (max 80MB for video, 10MB for image).')
+        throw new Error((data as { error?: string }).error || 'Upload failed')
+      }
+      const uploadedUrl = (data as { url?: string }).url || null
+      if (!uploadedUrl) throw new Error('Upload did not return a valid URL')
+      const payload = { ...settings, heroBannerImageUrl: uploadedUrl }
+      const saveRes = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const saveData = await saveRes.json().catch(() => ({}))
+      if (!saveRes.ok) throw new Error(saveData?.error || 'Failed to save hero media')
+      await fetchSettings()
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -174,19 +193,22 @@ export default function AdminCustomizePage() {
     const url = settings.heroBannerImageUrl
     if (!url) return
     try {
-      const res = await fetch('/api/admin/upload/delete', {
+      // Best-effort R2 delete
+      await fetch('/api/admin/upload/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
+      }).catch(() => {})
+      const payload = { ...settings, heroBannerImageUrl: null }
+      const saveRes = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        alert(data?.error || 'Failed to delete from storage. Please try again.')
-        return
-      }
-      setSettings((s) => ({ ...s, heroBannerImageUrl: null }))
+      if (!saveRes.ok) throw new Error('Failed to save')
+      await fetchSettings()
     } catch {
-      alert('Failed to delete from storage. Please try again.')
+      alert('Failed to remove hero media. Please try again.')
     }
   }
 
@@ -203,9 +225,12 @@ export default function AdminCustomizePage() {
       formData.set('file', file)
       formData.set('type', 'gallery')
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      const uploadedUrl = data.url
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('File too large. Please use a smaller file.')
+        throw new Error((data as { error?: string }).error || 'Upload failed')
+      }
+      const uploadedUrl = (data as { url?: string }).url
       if (!uploadedUrl || typeof uploadedUrl !== 'string') {
         throw new Error('Upload did not return a valid URL')
       }
@@ -375,70 +400,64 @@ export default function AdminCustomizePage() {
             </div>
           </div>
 
-          {SHOW_HERO_BANNER_UPLOAD && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-            {/* Hero Banner (single image, carousel slide on homepage) - hidden until upload fixed */}
             <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
               <ImageIcon size={20} />
-              Hero Banner
+              Hero Media
             </h2>
-            <p className="text-sm text-gray-500 mb-1">One image shown at the top of the homepage carousel. JPEG, PNG or WebP.</p>
+            <p className="text-sm text-gray-500 mb-1">One image or video shown as the homepage hero background. Separate from the gallery.</p>
             <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded mb-4 inline-block">
-              Recommended: 1200×400 px (3:1) or 1920×640 px • Min 800×300 • Max 10 MB
+              Image: JPEG, PNG or WebP • Max 10 MB &nbsp;|&nbsp; Video: MP4 • Max 80 MB
             </p>
             <div className="flex flex-wrap items-start gap-4">
               {settings.heroBannerImageUrl ? (
                 <div className="relative group">
-                  <img
-                    src={settings.heroBannerImageUrl}
-                    alt="Hero banner preview"
-                    className="w-full max-w-sm h-24 sm:h-28 object-cover rounded-lg border border-gray-200"
-                  />
+                  {settings.heroBannerImageUrl.match(/\.mp4(\?|$)/i) ? (
+                    <video
+                      src={settings.heroBannerImageUrl}
+                      className="w-full max-w-xs h-24 sm:h-28 object-cover rounded-lg border border-gray-200"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={settings.heroBannerImageUrl}
+                      alt="Hero preview"
+                      className="w-full max-w-xs h-24 sm:h-28 object-cover rounded-lg border border-gray-200"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={removeBanner}
                     className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow"
-                    title="Remove banner"
+                    title="Remove hero media"
                   >
                     <X size={14} />
                   </button>
                 </div>
               ) : null}
-              {!settings.heroBannerImageUrl && (
-                <label className="w-40 h-24 sm:w-48 sm:h-28 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-primary-50/50 transition-colors shrink-0">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleBannerUpload}
-                    disabled={uploadingBanner}
-                  />
-                  {uploadingBanner ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-600 border-t-transparent" />
-                  ) : (
-                    <Upload size={24} className="text-gray-400" />
-                  )}
-                </label>
-              )}
-              {settings.heroBannerImageUrl && (
-                <label className="w-40 h-24 sm:w-48 sm:h-28 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-primary-50/50 transition-colors shrink-0">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleBannerUpload}
-                    disabled={uploadingBanner}
-                  />
-                  {uploadingBanner ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-600 border-t-transparent" />
-                  ) : (
-                    <span className="text-xs text-gray-500 text-center px-2">Replace</span>
-                  )}
-                </label>
-              )}
+              <label className="w-40 h-24 sm:w-48 sm:h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary-500 hover:bg-primary-50/50 transition-colors shrink-0">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  disabled={uploadingBanner}
+                />
+                {uploadingBanner ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-600 border-t-transparent" />
+                ) : (
+                  <>
+                    <Upload size={22} className="text-gray-400" />
+                    <span className="text-xs text-gray-400 text-center px-2">
+                      {settings.heroBannerImageUrl ? 'Replace' : 'Upload image or video'}
+                    </span>
+                  </>
+                )}
+              </label>
             </div>
           </div>
-          )}
 
           {/* Social Links */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">

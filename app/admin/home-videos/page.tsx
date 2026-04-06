@@ -47,12 +47,15 @@ export default function AdminHomeVideosPage() {
       formData.set('file', file)
       formData.set('type', 'home_videos')
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('Video file too large. Please use a smaller file (max 80MB).')
+        throw new Error((data as { error?: string }).error || 'Upload failed')
+      }
       await fetch('/api/admin/home-videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoUrl: data.url, title: file.name.replace(/\.[^/.]+$/, '') }),
+        body: JSON.stringify({ videoUrl: (data as { url?: string }).url, title: file.name.replace(/\.[^/.]+$/, '') }),
       })
       fetchVideos()
     } catch (err) {
