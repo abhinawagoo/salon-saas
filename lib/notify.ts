@@ -9,6 +9,7 @@ import { sendBookingConfirmationWhatsApp, sendStaffBookingAlertWhatsApp } from '
 import { formatTime12h } from './formatTime'
 import { getPublicInvoiceUrl } from './invoiceUrl'
 import { parseStaffBookingNotifyPhones } from './phone'
+import { formatCurrencyPdf } from './currency'
 
 export { parseStaffBookingNotifyPhones }
 
@@ -21,6 +22,7 @@ export interface BookingNotificationPayload {
   servicesSummary: string
   totalAmount: number
   invoiceLink: string
+  currency?: string
 }
 
 function buildInvoiceLink(token: string): string {
@@ -68,6 +70,8 @@ export async function notifyStaffBookingManagersAfterPayment(bookingId: string):
   })
   if (!booking?.user) return
   const totalAmount = booking.payment?.totalAmount ?? 0
+  const siteConfig = await prisma.siteCustomization.findFirst({ select: { currency: true } })
+  const currency = siteConfig?.currency || 'EUR'
   const payload = buildBookingNotificationPayload(
     {
       token: booking.token,
@@ -76,7 +80,8 @@ export async function notifyStaffBookingManagersAfterPayment(bookingId: string):
       services: booking.services,
       user: booking.user,
     },
-    totalAmount
+    totalAmount,
+    currency
   )
   const locationName = booking.location?.name ?? 'Salon'
   const staffPhonesJson = (
@@ -163,7 +168,7 @@ export async function sendBookingNotification(
     payload.date,
     payload.timeSlot,
     payload.servicesSummary,
-    `₹${payload.totalAmount}`,
+    formatCurrencyPdf(payload.totalAmount, payload.currency || 'EUR', 0),
     invoiceLink
   )
   result.whatsapp = wa.ok
@@ -181,12 +186,13 @@ export function buildBookingNotificationPayload(
     services: { service: { name: string }; price: number }[]
     user: { name: string; mobile: string }
   },
-  paymentTotal: number
+  paymentTotal: number,
+  currency = 'EUR'
 ): BookingNotificationPayload {
   const date = bookingDateToYyyyMmDd(booking.date)
   const servicesSummary = booking.services.map((s) => {
     const qty = (s as { quantity?: number }).quantity ?? 1
-    return `${s.service.name}${qty > 1 ? ` ×${qty}` : ''} (₹${s.price})`
+    return `${s.service.name}${qty > 1 ? ` ×${qty}` : ''} (${formatCurrencyPdf(s.price, currency, 0)})`
   }).join(', ')
   return {
     customerName: booking.user.name,
@@ -197,5 +203,6 @@ export function buildBookingNotificationPayload(
     servicesSummary: servicesSummary.slice(0, 200),
     totalAmount: paymentTotal,
     invoiceLink: buildInvoiceLink(booking.token),
+    currency,
   }
 }

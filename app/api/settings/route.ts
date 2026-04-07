@@ -13,7 +13,7 @@ function parseJsonArray(str: string | null): string[] {
   }
 }
 
-type SettingsRow = { brandName: string; menuLabel: string; heroBannerImageUrl?: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null; invoiceWebsite: string | null; invoiceGst?: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl?: string | null; facebookUrl?: string | null; instagramUrl?: string | null }
+type SettingsRow = { brandName: string; menuLabel: string; heroBannerImageUrl?: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null; currency?: string | null; invoiceWebsite: string | null; invoiceGst?: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl?: string | null; facebookUrl?: string | null; instagramUrl?: string | null }
 
 const DEFAULT = {
   brandName: 'Salon',
@@ -37,8 +37,8 @@ export async function GET() {
     try {
       rows = await prisma.$queryRaw<SettingsRow[]>`
         SELECT "brandName", "menuLabel", "heroBannerImageUrl", "heroVideoUrls", "galleryImageUrls",
-          "invoiceWebsite", "invoiceGst", "invoiceUpiId", "invoiceTerms", "invoiceSignatureUrl",
-          "facebookUrl", "instagramUrl"
+          "currency", "invoiceWebsite", "invoiceGst", "invoiceUpiId", "invoiceTerms",
+          "invoiceSignatureUrl", "facebookUrl", "instagramUrl"
         FROM "SiteCustomization" WHERE id = 1 LIMIT 1
       `
     } catch {
@@ -64,6 +64,7 @@ export async function GET() {
         menuLabel: s.menuLabel,
         heroBannerImageUrl: s.heroBannerImageUrl ?? null,
         heroVideoUrls,
+        currency: s.currency || 'EUR',
         galleryImageUrls: parseJsonArray(s.galleryImageUrls),
         invoiceWebsite: s.invoiceWebsite ?? null,
         invoiceGst: s.invoiceGst ?? null,

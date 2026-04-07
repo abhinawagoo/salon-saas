@@ -14,7 +14,7 @@ function parseJsonArray(str: string | null): string[] {
   }
 }
 
-type SettingsRow = { brandName: string; menuLabel: string; heroBannerImageUrl?: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null; invoiceWebsite: string | null; invoiceGst: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl: string | null; facebookUrl: string | null; instagramUrl: string | null }
+type SettingsRow = { brandName: string; menuLabel: string; heroBannerImageUrl?: string | null; heroVideoUrls: string | null; galleryImageUrls: string | null; currency?: string | null; invoiceWebsite: string | null; invoiceGst: string | null; invoiceUpiId: string | null; invoiceTerms: string | null; invoiceSignatureUrl: string | null; facebookUrl: string | null; instagramUrl: string | null }
 
 const defaultSettings = {
   brandName: 'Salon',
@@ -37,8 +37,8 @@ export async function GET() {
     try {
       rows = await prisma.$queryRaw<SettingsRow[]>`
         SELECT "brandName", "menuLabel", "heroBannerImageUrl", "heroVideoUrls", "galleryImageUrls",
-          "invoiceWebsite", "invoiceGst", "invoiceUpiId", "invoiceTerms", "invoiceSignatureUrl",
-          "facebookUrl", "instagramUrl"
+          "currency", "invoiceWebsite", "invoiceGst", "invoiceUpiId", "invoiceTerms",
+          "invoiceSignatureUrl", "facebookUrl", "instagramUrl"
         FROM "SiteCustomization" WHERE id = 1 LIMIT 1
       `
     } catch {
@@ -77,6 +77,7 @@ export async function GET() {
       brandName: s.brandName,
       menuLabel: s.menuLabel,
       heroBannerImageUrl: s.heroBannerImageUrl ?? null,
+      currency: s.currency || 'EUR',
       heroVideoUrls: parseJsonArray(s.heroVideoUrls),
       galleryImageUrls: parseJsonArray(s.galleryImageUrls),
       invoiceWebsite: s.invoiceWebsite ?? null,
@@ -96,9 +97,10 @@ export async function GET() {
 async function updateSettings(request: Request) {
   try {
     const body = await request.json()
-    const { brandName, menuLabel, heroBannerImageUrl, heroVideoUrls, galleryImageUrls, invoiceWebsite, invoiceGst, invoiceUpiId, invoiceTerms, invoiceSignatureUrl, facebookUrl, instagramUrl } = body
+    const { brandName, menuLabel, heroBannerImageUrl, heroVideoUrls, galleryImageUrls, currency, invoiceWebsite, invoiceGst, invoiceUpiId, invoiceTerms, invoiceSignatureUrl, facebookUrl, instagramUrl } = body
 
     const heroBanner = heroBannerImageUrl !== undefined ? (typeof heroBannerImageUrl === 'string' && heroBannerImageUrl.trim() ? heroBannerImageUrl.trim() : null) : undefined
+    const currencyCode = currency !== undefined ? (String(currency).trim().toUpperCase() || 'EUR') : undefined
     const heroArr = Array.isArray(heroVideoUrls) ? heroVideoUrls.slice(0, 20) : []
     const galleryArr = Array.isArray(galleryImageUrls)
       ? galleryImageUrls.filter((u): u is string => typeof u === 'string' && u.length > 0).slice(0, 50)
@@ -147,6 +149,7 @@ async function updateSettings(request: Request) {
         brandName: brand,
         menuLabel: menu,
         heroBannerImageUrl: heroBanner ?? null,
+        currency: currencyCode ?? 'EUR',
         heroVideoUrls: JSON.stringify(heroArr),
         galleryImageUrls: JSON.stringify(galleryArr),
         invoiceWebsite: invWeb ?? null,
@@ -163,6 +166,7 @@ async function updateSettings(request: Request) {
         heroVideoUrls: JSON.stringify(heroArr),
         galleryImageUrls: JSON.stringify(galleryArr),
         ...(heroBanner !== undefined && { heroBannerImageUrl: heroBanner }),
+        ...(currencyCode !== undefined && { currency: currencyCode }),
         ...(invWeb !== undefined && { invoiceWebsite: invWeb }),
         ...(invGst !== undefined && { invoiceGst: invGst }),
         ...(invUpi !== undefined && { invoiceUpiId: invUpi }),
@@ -178,6 +182,7 @@ async function updateSettings(request: Request) {
       brandName: r?.brandName ?? 'Salon',
       menuLabel: r?.menuLabel ?? 'Services',
       heroBannerImageUrl: r?.heroBannerImageUrl ?? null,
+      currency: r?.currency || 'EUR',
       heroVideoUrls: parseJsonArray(r?.heroVideoUrls ?? null),
       galleryImageUrls: parseJsonArray(r?.galleryImageUrls ?? null),
       invoiceWebsite: r?.invoiceWebsite ?? null,

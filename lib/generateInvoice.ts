@@ -37,6 +37,7 @@ export interface InvoiceData {
   terms?: string
   invoiceNumber?: string
   signatureDataUrl?: string
+  currency?: string
 }
 
 const BORDER_COLOR: [number, number, number] = [229, 224, 216] // #E5E0D8
@@ -45,6 +46,8 @@ const BLACK: [number, number, number] = [30, 30, 30]
 const GRAY: [number, number, number] = [100, 100, 100]
 
 export function generateInvoicePDF(data: InvoiceData) {
+  const currency = data.currency || 'EUR'
+  const fmt = (amount: number, decimals = 2) => formatCurrencyPdf(amount, currency, decimals)
   const doc = new jsPDF({ putOnlyUsedFonts: true })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -256,9 +259,9 @@ export function generateInvoicePDF(data: InvoiceData) {
     doc.text(svcLines, colX.services + cellPad / 2, yPos + 5)
     doc.text(SAC_CODE, colX.sac + cellPad / 2, cellCenterY)
     doc.text(`${qty} PCS`, colX.qty + cellPad / 2, cellCenterY)
-    doc.text(formatCurrencyPdf(unitTaxable), colX.rate + colRate - cellPad / 2, cellCenterY, { align: 'right' })
-    doc.text(formatCurrencyPdf(tax), colX.tax + colTax - cellPad / 2, cellCenterY, { align: 'right' })
-    doc.text(formatCurrencyPdf(price, 0), contentRight - cellPad / 2, cellCenterY, { align: 'right' })
+    doc.text(fmt(unitTaxable), colX.rate + colRate - cellPad / 2, cellCenterY, { align: 'right' })
+    doc.text(fmt(tax), colX.tax + colTax - cellPad / 2, cellCenterY, { align: 'right' })
+    doc.text(fmt(price, 0), contentRight - cellPad / 2, cellCenterY, { align: 'right' })
     yPos += actualRowH
   })
 
@@ -276,8 +279,8 @@ export function generateInvoicePDF(data: InvoiceData) {
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...BLACK)
   doc.text('SUBTOTAL', contentLeft + cellPad / 2, yPos + 7)
-  doc.text(formatCurrencyPdf(totalTax), colX.tax + colTax - cellPad / 2, yPos + 7, { align: 'right' })
-  doc.text(formatCurrencyPdf(data.totalAmount, 0), contentRight - cellPad / 2, yPos + 7, { align: 'right' })
+  doc.text(fmt(totalTax), colX.tax + colTax - cellPad / 2, yPos + 7, { align: 'right' })
+  doc.text(fmt(data.totalAmount, 0), contentRight - cellPad / 2, yPos + 7, { align: 'right' })
   yPos += subtotalRowH + sectionSpacing
 
   // ----- BOTTOM GRID: Terms (left) | Totals (right) - match HTML layout -----
@@ -321,19 +324,19 @@ export function generateInvoicePDF(data: InvoiceData) {
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.text('Taxable Amount', totalsBoxX + boxPadding, bottomSectionY + 12)
-  doc.text(formatCurrencyPdf(totalTaxable), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 12, { align: 'right' })
+  doc.text(fmt(totalTaxable), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 12, { align: 'right' })
   doc.text('CGST @9%', totalsBoxX + boxPadding, bottomSectionY + 20)
-  doc.text(formatCurrencyPdf(totalTaxable * 0.09), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 20, { align: 'right' })
+  doc.text(fmt(totalTaxable * 0.09), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 20, { align: 'right' })
   doc.text('SGST @9%', totalsBoxX + boxPadding, bottomSectionY + 28)
-  doc.text(formatCurrencyPdf(totalTaxable * 0.09), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 28, { align: 'right' })
+  doc.text(fmt(totalTaxable * 0.09), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 28, { align: 'right' })
   doc.setFont('helvetica', 'bold')
   doc.text('Total Amount', totalsBoxX + boxPadding, bottomSectionY + 38)
-  doc.text(formatCurrencyPdf(data.totalAmount, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 38, { align: 'right' })
+  doc.text(fmt(data.totalAmount, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 38, { align: 'right' })
   doc.setFont('helvetica', 'normal')
   doc.text('Received Amount', totalsBoxX + boxPadding, bottomSectionY + 46)
-  doc.text(formatCurrencyPdf(amountPaid, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 46, { align: 'right' })
+  doc.text(fmt(amountPaid, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 46, { align: 'right' })
   doc.text('Balance', totalsBoxX + boxPadding, bottomSectionY + 54)
-  doc.text(formatCurrencyPdf(dueAmount, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 54, { align: 'right' })
+  doc.text(fmt(dueAmount, 0), totalsBoxX + totalsBoxWidth - boxPadding, bottomSectionY + 54, { align: 'right' })
   doc.text('Total Amount (in words):', totalsBoxX + boxPadding, bottomSectionY + 64)
   doc.setFontSize(7)
   const words = numberToWords(data.totalAmount)

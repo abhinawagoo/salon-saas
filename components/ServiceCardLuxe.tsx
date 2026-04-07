@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Check, Clock, Share2 } from 'lucide-react'
 import { PLACEHOLDER_IMAGE } from '@/lib/placeholders'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface ServiceCardLuxeProps {
   id: string
@@ -28,6 +29,7 @@ export default function ServiceCardLuxe({
   isSelected = false,
   onRemove,
 }: ServiceCardLuxeProps) {
+  const { formatPrice } = useCurrency()
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
 
@@ -36,7 +38,7 @@ export default function ServiceCardLuxe({
       try {
         await navigator.share({
           title: name,
-          text: description || `${name} - ₹${price.toLocaleString('en-IN')}`,
+          text: description || `${name} - ${formatPrice(price)}`,
           url: window.location.href,
         })
       } catch {
@@ -109,7 +111,7 @@ export default function ServiceCardLuxe({
         {description && (
           <p className="text-sm text-gray-500 line-clamp-2 mb-3">{description}</p>
         )}
-        <p className="text-lg font-bold text-gray-900 mb-4">₹{price.toLocaleString('en-IN')}</p>
+        <p className="text-lg font-bold text-gray-900 mb-4">{formatPrice(price)}</p>
 
         {/* Bottom actions */}
         <div className="flex items-center justify-between pt-3 border-t border-dashed border-gray-200">

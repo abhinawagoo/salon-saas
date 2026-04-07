@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, MapPin, CreditCard, RefreshCw, XCircle } from 'luc
 import { format, addDays, startOfDay, endOfDay } from 'date-fns'
 import { formatTime12h } from '@/lib/formatTime'
 import { AUTH_DISABLED_FOR_NOW } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 import DateTimePicker from '@/components/DateTimePicker'
 
 interface BookingItem {
@@ -26,6 +27,7 @@ interface BookingItem {
 }
 
 export default function ProfileBookingsPage() {
+  const { formatPrice } = useCurrency()
   const router = useRouter()
   const [bookings, setBookings] = useState<BookingItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -217,15 +219,15 @@ export default function ProfileBookingsPage() {
                     <ul className="text-gray-600 space-y-0.5">
                       {b.services.map((s, i) => (
                         <li key={i}>
-                          {s.name} — ₹{s.price}
+                          {s.name} — {formatPrice(s.price)}
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="flex items-center gap-2 text-sm pt-2 border-t border-gray-100">
                     <CreditCard size={16} />
-                    <span>Total ₹{b.totalAmount}</span>
-                    <span className="text-gray-500">· Paid ₹{b.amountPaid}</span>
+                    <span>Total {formatPrice(b.totalAmount)}</span>
+                    <span className="text-gray-500">· Paid {formatPrice(b.amountPaid)}</span>
                     <span className="text-gray-500">· {b.paymentStatus}</span>
                   </div>
                 </div>

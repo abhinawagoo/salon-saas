@@ -7,6 +7,7 @@ import ServiceCard from '@/components/ServiceCard'
 import ServiceModal from '@/components/ServiceModal'
 import { ChevronRight, Users, User, Phone } from 'lucide-react'
 import { parseBusinessHours, getDayConfig, isWithinClosingTime } from '@/lib/slots'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface Service {
   id: string
@@ -44,6 +45,7 @@ const PERSON_LABELS = ['Me', 'Friend', 'Family', 'Guest 4', 'Guest 5', 'Guest 6'
 const MAX_GROUP = 6
 
 export default function BookingServicesPage() {
+  const { formatPrice } = useCurrency()
   const router = useRouter()
   const [hasData, setHasData] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
@@ -405,7 +407,7 @@ export default function BookingServicesPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 min-h-[52px]">
           <div className={`transition-all duration-200 min-w-0 ${totalBump ? 'scale-105' : 'scale-100'}`}>
             <p className="text-white text-sm font-sans font-medium">
-              {totalItems} {totalItems === 1 ? 'service' : 'services'} · ₹{totalPrice.toLocaleString('en-IN')}
+              {totalItems} {totalItems === 1 ? 'service' : 'services'} · {formatPrice(totalPrice)}
             </p>
             {parallelDurationMinutes > 0 && (
               <p className="text-white/40 text-[10px] font-sans mt-0.5">

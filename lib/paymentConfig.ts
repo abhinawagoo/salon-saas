@@ -101,18 +101,19 @@ export function calcOptionAmount(opt: PaymentOptionConfig, totalAmount: number):
   return Math.round((opt.value / 100) * totalAmount * 100) / 100
 }
 
-/** Description shown below option label (e.g. "20% of ₹2000 = ₹400") */
-export function calcOptionDescription(opt: PaymentOptionConfig, totalAmount: number): string {
+/** Description shown below option label (e.g. "20% of €2000 = €400") */
+export function calcOptionDescription(opt: PaymentOptionConfig, totalAmount: number, currency = 'EUR'): string {
   if (opt.type === 'FULL') return 'Pay complete amount now'
   if (opt.type === 'FREE') return 'Pay the full amount when you arrive'
+  const fmt = (n: number) => `${currency} ${Math.round(n)}`
   if (opt.mode === 'fixed') {
     const amt = Math.min(opt.value, totalAmount)
     const bal = totalAmount - amt
-    return `Pay ₹${amt} now · ₹${bal} at salon`
+    return `Pay ${fmt(amt)} now · ${fmt(bal)} at salon`
   }
   const amt = calcOptionAmount(opt, totalAmount)
   const bal = totalAmount - amt
-  return `Pay ${opt.value}% now (₹${amt}) · ₹${bal} at salon`
+  return `Pay ${opt.value}% now (${fmt(amt)}) · ${fmt(bal)} at salon`
 }
 
 /** Validate config before saving. Returns error string or null. */

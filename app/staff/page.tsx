@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { formatTime12h } from '@/lib/formatTime'
 import { CheckCircle, Clock, Phone, User, Banknote, Printer, Copy, MapPin, Edit3, Send } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface Location {
   id: string
@@ -52,6 +53,7 @@ interface Booking {
 }
 
 export default function StaffDashboard() {
+  const { formatPrice } = useCurrency()
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState<string>('')
   const [todayBookings, setTodayBookings] = useState<Booking[]>([])
@@ -353,14 +355,14 @@ export default function StaffDashboard() {
             {booking.services.map((bs, idx) => (
               <div key={idx} className="text-sm text-gray-600 flex justify-between">
                 <span>{bs.service.name}{(bs.quantity ?? 1) > 1 ? ` ×${bs.quantity}` : ''}</span>
-                <span>₹{bs.price}</span>
+                <span>{formatPrice(bs.price)}</span>
               </div>
             ))}
           </div>
           <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between font-semibold">
             <span>Total:</span>
             <span className="text-primary-600">
-              ₹{booking.payment?.totalAmount ?? booking.services.reduce((sum, bs) => sum + bs.price, 0)}
+              {formatPrice(booking.payment?.totalAmount ?? booking.services.reduce((sum, bs) => sum + bs.price, 0))}
             </span>
           </div>
         </div>
@@ -368,19 +370,19 @@ export default function StaffDashboard() {
         <div className="pt-3 border-t border-gray-200 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Paid:</span>
-            <span className="font-medium text-green-700">₹{booking.payment?.amountPaid ?? 0}</span>
+            <span className="font-medium text-green-700">{formatPrice(booking.payment?.amountPaid ?? 0)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Due:</span>
             <span className="font-medium text-amber-700">
-              ₹{Math.max(0, (booking.payment?.totalAmount ?? booking.services.reduce((s, bs) => s + bs.price, 0)) - (booking.payment?.amountPaid ?? 0))}
+              {formatPrice(Math.max(0, (booking.payment?.totalAmount ?? booking.services.reduce((s, bs) => s + bs.price, 0)) - (booking.payment?.amountPaid ?? 0)))}
             </span>
           </div>
           {(booking.payment?.onlineAmount !== undefined && booking.payment.onlineAmount > 0) && (
-            <div className="text-xs text-gray-500">Online: ₹{booking.payment.onlineAmount}</div>
+            <div className="text-xs text-gray-500">Online: {formatPrice(booking.payment.onlineAmount)}</div>
           )}
           {(booking.payment?.cashAmount !== undefined && booking.payment.cashAmount > 0) && (
-            <div className="text-xs text-gray-500">Cash: ₹{booking.payment.cashAmount}</div>
+            <div className="text-xs text-gray-500">Cash: {formatPrice(booking.payment.cashAmount)}</div>
           )}
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -516,12 +518,12 @@ export default function StaffDashboard() {
               {paymentModal.mode === 'add_cash' ? 'Record cash payment' : 'Edit payment breakdown'}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Booking {paymentModal.booking.token} — Total: ₹{paymentModal.booking.payment?.totalAmount ?? paymentModal.booking.services.reduce((s, bs) => s + bs.price, 0)}
+              Booking {paymentModal.booking.token} — Total: {formatPrice(paymentModal.booking.payment?.totalAmount ?? paymentModal.booking.services.reduce((s, bs) => s + bs.price, 0))}
             </p>
             {paymentModal.mode === 'add_cash' ? (
               <>
-                <p className="text-sm text-gray-700 mb-2">Amount already paid: ₹{paymentModal.booking.payment?.amountPaid ?? 0}</p>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount to add (₹)</label>
+                <p className="text-sm text-gray-700 mb-2">Amount already paid: {formatPrice(paymentModal.booking.payment?.amountPaid ?? 0)}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount to add</label>
                 <input
                   type="number"
                   min="0"
@@ -534,7 +536,7 @@ export default function StaffDashboard() {
               </>
             ) : (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Online amount (₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Online amount</label>
                 <input
                   type="number"
                   min="0"
@@ -543,7 +545,7 @@ export default function StaffDashboard() {
                   onChange={(e) => setEditOnline(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
                 />
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount (₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount</label>
                 <input
                   type="number"
                   min="0"
@@ -593,7 +595,7 @@ export default function StaffDashboard() {
                     <div key={svc.id} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2.5">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-800 truncate">{svc.name}</div>
-                        <div className="text-xs text-gray-400">₹{svc.price} · {svc.duration} min</div>
+                        <div className="text-xs text-gray-400">{formatPrice(svc.price)} · {svc.duration} min</div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <button

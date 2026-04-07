@@ -240,6 +240,7 @@ model SiteCustomization {
   invoiceSignatureUrl String?  // Signature image shown in invoice signature box
   facebookUrl         String?  // Facebook profile/page URL for footer
   instagramUrl        String?  // Instagram profile URL for footer
+  currency            String   @default("EUR")  // ISO 4217 currency code (EUR, USD, GBP, INR…)
   paymentConfigJson   String?  // JSON: PaymentConfig (see lib/paymentConfig.ts)
   updatedAt           DateTime @updatedAt
 }

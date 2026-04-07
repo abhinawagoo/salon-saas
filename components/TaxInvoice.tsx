@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { numberToWords } from '@/lib/numberToWords'
-import { formatCurrency } from '@/lib/currency'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 const SAC_CODE = '9984'
 const GST_RATE = 0.18
@@ -36,6 +36,7 @@ export interface TaxInvoiceData {
 }
 
 export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
+  const { formatPrice } = useCurrency()
   const terms = data.terms?.trim() || ''
   const amountPaid = data.amountPaid ?? 0
   const dueAmount = data.dueAmount ?? Math.max(0, data.totalAmount - amountPaid)
@@ -134,19 +135,19 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
                   >
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <span className="text-xs text-gray-500">#{i + 1}</span>
-                      <span className="text-sm font-semibold text-gray-900">{formatCurrency(s.price)}</span>
+                      <span className="text-sm font-semibold text-gray-900">{formatPrice(s.price)}</span>
                     </div>
                     <p className="text-sm font-medium text-gray-800 break-words">{s.name}</p>
                     <div className="flex justify-between text-xs text-gray-600 mt-1">
-                      <span>Rate: {formatCurrency(unitTaxable, 2)}{qty > 1 ? ` × ${qty}` : ''}</span>
-                      <span>Tax: {formatCurrency(tax, 2)}</span>
+                      <span>Rate: {formatPrice(unitTaxable)}{qty > 1 ? ` × ${qty}` : ''}</span>
+                      <span>Tax: {formatPrice(tax)}</span>
                     </div>
                   </div>
                 )
               })}
           <div className="rounded-lg border border-[#E5E0D8] p-3 bg-[#F3EEE6] font-semibold flex justify-between items-center">
             <span className="text-sm text-gray-900">SUBTOTAL</span>
-            <span className="text-sm text-gray-900">{formatCurrency(data.totalAmount)}</span>
+            <span className="text-sm text-gray-900">{formatPrice(data.totalAmount)}</span>
           </div>
         </div>
 
@@ -176,9 +177,9 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
                     <td className="text-gray-600 align-middle" style={{ padding: 10, wordBreak: 'break-word', maxWidth: 0 }}>{s.name}</td>
                     <td className="text-gray-600 align-middle" style={{ padding: 10 }}>{SAC_CODE}</td>
                     <td className="text-gray-600 align-middle" style={{ padding: 10 }}>{qty} PCS</td>
-                    <td className="text-right text-gray-700 font-medium align-middle" style={{ padding: 10 }}>{formatCurrency(unitTaxable, 2)}</td>
-                    <td className="text-right text-gray-700 font-medium align-middle" style={{ padding: 10 }}>{formatCurrency(tax, 2)}</td>
-                    <td className="text-right font-semibold align-middle" style={{ padding: 10 }}>{formatCurrency(s.price)}</td>
+                    <td className="text-right text-gray-700 font-medium align-middle" style={{ padding: 10 }}>{formatPrice(unitTaxable)}</td>
+                    <td className="text-right text-gray-700 font-medium align-middle" style={{ padding: 10 }}>{formatPrice(tax)}</td>
+                    <td className="text-right font-semibold align-middle" style={{ padding: 10 }}>{formatPrice(s.price)}</td>
                   </tr>
                 )
               })}
@@ -186,8 +187,8 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
                 <td style={{ padding: 10 }}>SUBTOTAL</td>
                 <td style={{ padding: 10 }} colSpan={3}></td>
                 <td style={{ padding: 10, textAlign: 'right' }}></td>
-                <td style={{ padding: 10, textAlign: 'right' }}>{formatCurrency(totalTax, 2)}</td>
-                <td style={{ padding: 10, textAlign: 'right' }}>{formatCurrency(data.totalAmount)}</td>
+                <td style={{ padding: 10, textAlign: 'right' }}>{formatPrice(totalTax)}</td>
+                <td style={{ padding: 10, textAlign: 'right' }}>{formatPrice(data.totalAmount)}</td>
               </tr>
             </tbody>
           </table>
@@ -212,27 +213,27 @@ export default function TaxInvoice({ data }: { data: TaxInvoiceData }) {
           <div className="space-y-1.5 sm:space-y-2">
             <div className="flex justify-between text-xs sm:text-sm gap-2">
               <span className="text-gray-600 shrink-0">Taxable Amount</span>
-              <span className="font-medium text-right break-all">{formatCurrency(totalTaxable, 2)}</span>
+              <span className="font-medium text-right break-all">{formatPrice(totalTaxable)}</span>
             </div>
             <div className="flex justify-between text-xs sm:text-sm gap-2">
               <span className="text-gray-600 shrink-0">CGST @9%</span>
-              <span className="font-medium text-right break-all">{formatCurrency(totalTaxable * 0.09, 2)}</span>
+              <span className="font-medium text-right break-all">{formatPrice(totalTaxable * 0.09)}</span>
             </div>
             <div className="flex justify-between text-xs sm:text-sm gap-2">
               <span className="text-gray-600 shrink-0">SGST @9%</span>
-              <span className="font-medium text-right break-all">{formatCurrency(totalTaxable * 0.09, 2)}</span>
+              <span className="font-medium text-right break-all">{formatPrice(totalTaxable * 0.09)}</span>
             </div>
             <div className="flex justify-between text-xs sm:text-sm font-bold pt-2 border-t border-gray-200 gap-2">
               <span className="text-gray-900 shrink-0">Total Amount</span>
-              <span className="text-gray-900 text-right break-all">{formatCurrency(data.totalAmount)}</span>
+              <span className="text-gray-900 text-right break-all">{formatPrice(data.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-xs sm:text-sm gap-2">
               <span className="text-gray-600 shrink-0">Received Amount</span>
-              <span className="font-medium text-right break-all">{formatCurrency(amountPaid)}</span>
+              <span className="font-medium text-right break-all">{formatPrice(amountPaid)}</span>
             </div>
             <div className="flex justify-between text-xs sm:text-sm gap-2">
               <span className="text-gray-600 shrink-0">Balance</span>
-              <span className="font-medium text-right break-all">{formatCurrency(dueAmount)}</span>
+              <span className="font-medium text-right break-all">{formatPrice(dueAmount)}</span>
             </div>
             <div className="pt-2 border-t border-gray-200">
               <p className="text-xs text-gray-600 mb-0.5">Total Amount (in words):</p>

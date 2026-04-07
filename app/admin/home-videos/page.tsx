@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Video, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { uploadFile } from '@/lib/uploadFile'
 
 interface HomeVideo {
   id: string
@@ -37,25 +38,17 @@ export default function AdminHomeVideosPage() {
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !file.type.startsWith('video/')) {
+    if (!file || file.type !== 'video/mp4') {
       alert('Please select an MP4 video file.')
       return
     }
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.set('file', file)
-      formData.set('type', 'home_videos')
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        if (res.status === 413) throw new Error('Video file too large. Please use a smaller file (max 80MB).')
-        throw new Error((data as { error?: string }).error || 'Upload failed')
-      }
+      const videoUrl = await uploadFile(file, 'home_videos')
       await fetch('/api/admin/home-videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoUrl: (data as { url?: string }).url, title: file.name.replace(/\.[^/.]+$/, '') }),
+        body: JSON.stringify({ videoUrl, title: file.name.replace(/\.[^/.]+$/, '') }),
       })
       fetchVideos()
     } catch (err) {

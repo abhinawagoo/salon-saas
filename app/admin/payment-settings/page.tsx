@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CreditCard, Wallet, Store, Save, ToggleLeft, ToggleRight, AlertCircle, CheckCircle2, Loader2, ChevronRight } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 import type { PaymentConfig, PaymentOptionConfig, AdvanceOption } from '@/lib/paymentConfig'
 import { validatePaymentConfig } from '@/lib/paymentConfig'
 
@@ -31,6 +32,7 @@ const OPTION_META = {
 }
 
 export default function PaymentSettingsPage() {
+  const { currency, formatPrice } = useCurrency()
   const [config, setConfig] = useState<PaymentConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -236,7 +238,7 @@ export default function PaymentSettingsPage() {
                             : 'border-white/10 text-white/40 hover:text-white hover:border-white/20'
                         }`}
                       >
-                        {m === 'percent' ? '% Percentage' : '₹ Fixed Amount'}
+                        {m === 'percent' ? '% Percentage' : `${currency} Fixed Amount`}
                       </button>
                     ))}
                   </div>
@@ -245,7 +247,7 @@ export default function PaymentSettingsPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative flex-1">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm font-sans pointer-events-none">
-                        {advOpt.mode === 'percent' ? '%' : '₹'}
+                        {advOpt.mode === 'percent' ? '%' : currency}
                       </span>
                       <input
                         type="number"
@@ -263,20 +265,20 @@ export default function PaymentSettingsPage() {
                     </div>
                     <p className="text-white/30 text-xs font-sans shrink-0 max-w-[160px]">
                       {advOpt.mode === 'percent'
-                        ? `E.g. 20% of ₹1000 = ₹200`
-                        : `Customer pays exactly ₹${advOpt.value} now`}
+                        ? `E.g. 20% of ${formatPrice(1000)} = ${formatPrice(200)}`
+                        : `Customer pays exactly ${formatPrice(advOpt.value)} now`}
                     </p>
                   </div>
 
                   {/* Preview */}
                   <div className="bg-charcoal-dark rounded-xl px-4 py-2.5 border border-white/5">
                     <p className="text-white/40 text-[10px] font-sans tracking-wide">
-                      Preview on booking page (for ₹1,000 total):
+                      Preview on booking page (for {formatPrice(1000)} total):
                     </p>
                     <p className="text-white/70 text-xs font-sans mt-1">
                       {advOpt.mode === 'percent'
-                        ? `Pay ${advOpt.value}% now (₹${Math.round((advOpt.value / 100) * 1000)}) · ₹${1000 - Math.round((advOpt.value / 100) * 1000)} at salon`
-                        : `Pay ₹${Math.min(advOpt.value, 1000)} now · ₹${Math.max(0, 1000 - advOpt.value)} at salon`}
+                        ? `Pay ${advOpt.value}% now (${formatPrice(Math.round((advOpt.value / 100) * 1000))}) · ${formatPrice(1000 - Math.round((advOpt.value / 100) * 1000))} at salon`
+                        : `Pay ${formatPrice(Math.min(advOpt.value, 1000))} now · ${formatPrice(Math.max(0, 1000 - advOpt.value))} at salon`}
                     </p>
                   </div>
                 </div>

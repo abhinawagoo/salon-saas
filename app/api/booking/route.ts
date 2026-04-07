@@ -282,11 +282,15 @@ export async function POST(request: Request) {
       },
     })
 
+    const siteConfig = await prisma.siteCustomization.findFirst({ select: { currency: true } }).catch(() => null)
+    const currency = siteConfig?.currency || 'EUR'
+
     // FREE booking: no payment gateway needed
     if (isFreeBooking) {
       sendBookingNotification(user.mobile, buildBookingNotificationPayload(
         { token: booking.token, date: booking.date, timeSlot: booking.timeSlot, services: booking.services, user: { name: user.name, mobile: user.mobile } },
-        totalAmount
+        totalAmount,
+        currency
       ), 'customer').catch((e) => console.error('Notify customer failed:', e))
 
       return NextResponse.json({ bookingId: booking.id, token: bookingToken, noPayment: true })
@@ -309,7 +313,8 @@ export async function POST(request: Request) {
         services: booking.services,
         user: { name: user.name, mobile: user.mobile },
       },
-      totalAmountForNotify
+      totalAmountForNotify,
+      currency
     )
     sendBookingNotification(user.mobile, payload, 'customer').catch((e) =>
       console.error('Notify customer failed:', e)

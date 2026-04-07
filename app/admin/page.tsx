@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Edit, Trash2, Image as ImageIcon, Calendar, Settings, Layers, MessageSquare, MessageCircle, CreditCard } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface Service {
   id: string
@@ -19,6 +20,7 @@ interface Service {
 }
 
 export default function AdminDashboard() {
+  const { formatPrice } = useCurrency()
   const [services, setServices] = useState<Service[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -221,7 +223,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 sm:px-6 py-2.5 whitespace-nowrap text-gray-900 align-top">₹{service.price}</td>
+                      <td className="px-4 sm:px-6 py-2.5 whitespace-nowrap text-gray-900 align-top">{formatPrice(service.price)}</td>
                       <td className="px-4 sm:px-6 py-2.5 whitespace-nowrap text-gray-500 align-top" onClick={(e) => e.stopPropagation()}>
                         {service.duration} min
                       </td>
@@ -281,7 +283,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-purple-50 rounded-lg p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-purple-600 font-medium">Revenue</p>
-              <p className="text-xl sm:text-2xl font-bold text-purple-900">₹0</p>
+              <p className="text-xl sm:text-2xl font-bold text-purple-900">{formatPrice(0)}</p>
             </div>
           </div>
         </div>
@@ -349,7 +351,7 @@ export default function AdminDashboard() {
               )}
               <div className="flex-1 min-w-0">
                 <h3 className="text-xl font-semibold text-gray-900">{detailService.name}</h3>
-                <p className="text-sm text-gray-500 mt-0.5">₹{detailService.price} · {detailService.duration} min</p>
+                <p className="text-sm text-gray-500 mt-0.5">{formatPrice(detailService.price)} · {detailService.duration} min</p>
                 <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   detailService.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
@@ -648,7 +650,7 @@ function ServiceModal({ service, onClose, onSave }: { service: Service | null; o
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-light text-gray-700 mb-3">Price (₹) *</label>
+                <label className="block text-sm font-light text-gray-700 mb-3">Price *</label>
                 <input
                   type="number"
                   required

@@ -17,9 +17,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const total = parseFloat(searchParams.get('total') || '0')
 
-    const rows = await prisma.$queryRaw<Array<{ paymentConfigJson: string | null }>>`
-      SELECT "paymentConfigJson" FROM "SiteCustomization" WHERE id = 1 LIMIT 1
+    const rows = await prisma.$queryRaw<Array<{ paymentConfigJson: string | null; currency: string | null }>>`
+      SELECT "paymentConfigJson", "currency" FROM "SiteCustomization" WHERE id = 1 LIMIT 1
     `
+    const currency = rows[0]?.currency || 'EUR'
     const config = parsePaymentConfig(rows[0]?.paymentConfigJson)
     const enabled = getEnabledOptions(config)
 
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       type: opt.type,
       label: opt.label,
       amount: calcOptionAmount(opt, total),
-      description: calcOptionDescription(opt, total),
+      description: calcOptionDescription(opt, total, currency),
       ...(opt.type === 'ADVANCE'
         ? { advanceMode: opt.mode, advanceValue: opt.value }
         : {}),

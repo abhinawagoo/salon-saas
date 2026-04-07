@@ -54,10 +54,10 @@ export default function GalleryClient() {
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            Gallery – {SEO.siteName}
+            Galerie – {SEO.siteName}
           </h1>
           <p className="text-gray-600 text-sm mb-6">
-            Professional haircuts and grooming at our salon in Sasaram, Bihar.
+            Coupes, colorations et soins au 17 Rue de Châteaudun, Paris 9.
           </p>
           {images.length === 0 ? (
             <p className="text-gray-500">No gallery images yet.</p>

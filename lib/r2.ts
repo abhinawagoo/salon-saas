@@ -4,7 +4,8 @@
  * R2_PUBLIC_URL = public URL for the bucket (e.g. https://pub-xxx.r2.dev or custom domain).
  */
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 const accountId = process.env.R2_ACCOUNT_ID
 const accessKeyId = process.env.R2_ACCESS_KEY_ID
@@ -55,6 +56,71 @@ export async function uploadToR2(
     return `${publicUrl}/${key}`
   } catch (err) {
     console.error('R2 upload error:', err)
+    return null
+  }
+}
+
+// Track whether CORS has been configured in this process lifetime to avoid repeated calls
+let corsConfigure = false
+
+/**
+ * Ensure the R2 bucket has CORS configured for direct browser uploads.
+ * Called once per process; safe to call multiple times.
+ */
+export async function ensureR2Cors(): Promise<void> {
+  if (corsConfigure || !R2_ENABLED || !bucketName) return
+  const client = getClient()
+  if (!client) return
+  try {
+    await client.send(
+      new PutBucketCorsCommand({
+        Bucket: bucketName,
+        CORSConfiguration: {
+          CORSRules: [
+            {
+              AllowedOrigins: ['*'],
+              AllowedMethods: ['PUT', 'GET', 'HEAD'],
+              AllowedHeaders: ['*'],
+              MaxAgeSeconds: 3600,
+            },
+          ],
+        },
+      })
+    )
+    corsConfigure = true
+  } catch (err) {
+    // Non-fatal: log but don't fail upload flow
+    console.warn('R2 CORS setup warning:', err)
+  }
+}
+
+/**
+ * Generate a presigned PUT URL so the browser can upload directly to R2.
+ * Returns { presignedUrl, publicUrl } or null if R2 not configured.
+ * Expires in 15 minutes.
+ */
+export async function getPresignedUploadUrl(
+  folder: R2Folder,
+  ext: string,
+  contentType: string
+): Promise<{ presignedUrl: string; publicUrl: string } | null> {
+  if (!R2_ENABLED || !bucketName || !publicUrl) return null
+  const client = getClient()
+  if (!client) return null
+
+  const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const key = `${folder}/${uniqueId}${ext}`
+
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      ContentType: contentType,
+    })
+    const presignedUrl = await getSignedUrl(client, command, { expiresIn: 900 })
+    return { presignedUrl, publicUrl: `${publicUrl}/${key}` }
+  } catch (err) {
+    console.error('R2 presign error:', err)
     return null
   }
 }

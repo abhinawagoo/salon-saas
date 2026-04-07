@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Upload, X, Save, Image as ImageIcon, MapPin, ChevronRight, Video, Share2 } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { uploadFile } from '@/lib/uploadFile'
 
 const MAX_IMAGES = 50
 
@@ -11,6 +12,7 @@ interface Settings {
   brandName: string
   menuLabel: string
   heroBannerImageUrl: string | null
+  currency: string
   heroVideoUrls: string[]
   galleryImageUrls: string[]
   invoiceWebsite: string
@@ -25,6 +27,7 @@ export default function AdminCustomizePage() {
     brandName: 'Salon',
     menuLabel: 'Services',
     heroBannerImageUrl: null,
+    currency: 'EUR',
     heroVideoUrls: [],
     galleryImageUrls: [],
     invoiceWebsite: '',
@@ -52,6 +55,7 @@ export default function AdminCustomizePage() {
         brandName: data.brandName ?? 'Salon',
         menuLabel: data.menuLabel ?? 'Services',
         heroBannerImageUrl: data.heroBannerImageUrl ?? null,
+        currency: data.currency ?? 'EUR',
         heroVideoUrls: Array.isArray(data.heroVideoUrls) ? data.heroVideoUrls : [],
         galleryImageUrls: Array.isArray(data.galleryImageUrls) ? data.galleryImageUrls : [],
         invoiceWebsite: data.invoiceWebsite ?? '',
@@ -99,17 +103,7 @@ export default function AdminCustomizePage() {
     }
     setUploadingBanner(true)
     try {
-      const formData = new FormData()
-      formData.set('file', file)
-      formData.set('type', 'hero')
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        if (res.status === 413) throw new Error('File too large. Please use a smaller file (max 80MB for video, 10MB for image).')
-        throw new Error((data as { error?: string }).error || 'Upload failed')
-      }
-      const uploadedUrl = (data as { url?: string }).url || null
-      if (!uploadedUrl) throw new Error('Upload did not return a valid URL')
+      const uploadedUrl = await uploadFile(file, 'hero')
       const payload = { ...settings, heroBannerImageUrl: uploadedUrl }
       const saveRes = await fetch('/api/admin/settings', {
         method: 'POST',
@@ -212,7 +206,7 @@ export default function AdminCustomizePage() {
     }
   }
 
-  const handleFileUpload = async (type: 'image', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (_type: 'image', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (settings.galleryImageUrls.length >= MAX_IMAGES) {
@@ -341,6 +335,28 @@ export default function AdminCustomizePage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="e.g. Services or Menu"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                <select
+                  value={settings.currency}
+                  onChange={(e) => setSettings((s) => ({ ...s, currency: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                >
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="USD">USD — US Dollar ($)</option>
+                  <option value="GBP">GBP — British Pound (£)</option>
+                  <option value="INR">INR — Indian Rupee (₹)</option>
+                  <option value="AED">AED — UAE Dirham (د.إ)</option>
+                  <option value="SGD">SGD — Singapore Dollar (S$)</option>
+                  <option value="CAD">CAD — Canadian Dollar (CA$)</option>
+                  <option value="AUD">AUD — Australian Dollar (A$)</option>
+                  <option value="CHF">CHF — Swiss Franc (Fr)</option>
+                  <option value="JPY">JPY — Japanese Yen (¥)</option>
+                  <option value="SAR">SAR — Saudi Riyal (﷼)</option>
+                  <option value="MYR">MYR — Malaysian Ringgit (RM)</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Used for all price displays across the site.</p>
               </div>
             </div>
           </div>

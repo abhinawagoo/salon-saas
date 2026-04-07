@@ -3,6 +3,7 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ScrollToHash from "@/components/ScrollToHash";
+import ClientProviders from "./ClientProviders";
 import { SEO } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -56,6 +57,7 @@ export default function RootLayout({
     telephone: SEO.telephone,
     address: {
       '@type': 'PostalAddress',
+      streetAddress: SEO.address.streetAddress,
       addressLocality: SEO.address.locality,
       addressRegion: SEO.address.region,
       postalCode: SEO.address.postalCode,
@@ -73,10 +75,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <Navigation />
-        <ScrollToHash />
-        <main className="flex-1 bg-cream">{children}</main>
-        <Footer />
+        <ClientProviders>
+          <Navigation />
+          <ScrollToHash />
+          <main className="flex-1 bg-cream">{children}</main>
+          <Footer />
+        </ClientProviders>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { recordSystemMessage } from '@/lib/whatsapp-chat'
 import { getOrAssignBillNo } from '@/lib/billNo'
 import { getPublicInvoiceUrl } from '@/lib/invoiceUrl'
 import { notifyStaffBookingManagersAfterPayment } from '@/lib/notify'
+import { formatCurrencyPdf } from '@/lib/currency'
 import crypto from 'crypto'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -120,7 +121,11 @@ export async function POST(request: Request) {
           void (async () => {
             try {
               const billNo = await getOrAssignBillNo(bookingId)
-              const p = await prisma.payment.findFirst({ where: { bookingId } })
+              const [p, siteConfig] = await Promise.all([
+                prisma.payment.findFirst({ where: { bookingId } }),
+                prisma.siteCustomization.findFirst({ select: { currency: true } }),
+              ])
+              const currency = siteConfig?.currency || 'EUR'
               const balanceDue = Math.max(0, (p?.totalAmount ?? 0) - (p?.amountPaid ?? 0))
               await sendInvoiceWhatsApp(b.user.mobile, b.user.name || 'Customer', amountPaid, new Date(), invoiceLink, {
                 billNo,
@@ -131,7 +136,7 @@ export async function POST(request: Request) {
               })
               await recordSystemMessage(
                 b.user.mobile,
-                `Invoice sent — Bill ${billNo} · ₹${Math.round(amountPaid)} paid`,
+                `Invoice sent — Bill ${billNo} · ${formatCurrencyPdf(Math.round(amountPaid), currency, 0)} paid`,
                 {
                   customerName: b.user.name || undefined,
                   templateName: process.env.WHATSAPP_INVOICE_TEMPLATE_NAME || 'customer_invoice',

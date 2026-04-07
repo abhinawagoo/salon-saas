@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Minus, Trash2 } from 'lucide-react'
 import { PLACEHOLDER_IMAGE } from '@/lib/placeholders'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface ServiceCardProps {
   id: string
@@ -23,6 +24,7 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({ name, description, price, imageUrl, duration, onAdd, onCardClick, quantity = 0, onIncrease, onDecrease, onDelete }: ServiceCardProps) {
+  const { formatPrice } = useCurrency()
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
 
@@ -78,7 +80,7 @@ export default function ServiceCard({ name, description, price, imageUrl, durati
         </div>
       </div>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 p-3 sm:p-4 pt-3 border-t border-gray-100 shrink-0">
-          <span className="text-base sm:text-2xl font-semibold sm:font-light text-gray-900">₹{price}</span>
+          <span className="text-base sm:text-2xl font-semibold sm:font-light text-gray-900">{formatPrice(price)}</span>
           {hasQuantity ? (
             <div className="flex items-center gap-1">
               <div className="flex items-center justify-center gap-0 rounded-full border-2 border-primary-400 min-h-[40px] sm:min-h-[44px] overflow-hidden bg-white">

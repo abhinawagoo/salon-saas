@@ -5,6 +5,7 @@ import { format, isToday, isPast, isFuture, startOfDay, parseISO, subDays } from
 import { CheckCircle, XCircle, Clock, Calendar, ChevronDown, ChevronUp, Phone, User, DollarSign, Banknote, Edit3, Download, Printer, Send } from 'lucide-react'
 import { formatTime12h } from '@/lib/formatTime'
 import { setUserRole } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface Location {
   id: string
@@ -47,6 +48,7 @@ interface Booking {
 type FilterType = 'all' | 'today' | 'upcoming' | 'previous' | 'dateRange'
 
 export default function AdminBookingsPage() {
+  const { formatPrice } = useCurrency()
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const weekAgoStr = format(subDays(new Date(), 7), 'yyyy-MM-dd')
   const [locations, setLocations] = useState<Location[]>([])
@@ -168,7 +170,7 @@ export default function AdminBookingsPage() {
     const rows = filteredBookings.map((b) => {
       const total = b.payment?.totalAmount ?? b.services.reduce((s, bs) => s + bs.price, 0)
       const paid = b.payment?.amountPaid ?? 0
-      const services = b.services.map((bs) => `${bs.service.name} (₹${bs.price})`).join('; ')
+      const services = b.services.map((bs) => `${bs.service.name} (${formatPrice(bs.price)})`).join('; ')
       return {
         Date: format(new Date(b.date), 'yyyy-MM-dd'),
         Time: formatTime12h(b.timeSlot),
@@ -400,9 +402,9 @@ export default function AdminBookingsPage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
             <div className="text-2xl font-bold text-green-600">
-              ₹{bookings.reduce((sum, b) => {
+              {formatPrice(bookings.reduce((sum, b) => {
                 return sum + b.services.reduce((s, bs) => s + bs.price, 0)
-              }, 0)}
+              }, 0))}
             </div>
           </div>
         </div>
@@ -529,7 +531,7 @@ export default function AdminBookingsPage() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
-                          {bookingCount} booking{bookingCount !== 1 ? 's' : ''} • Total: ₹{totalAmount}
+                          {bookingCount} booking{bookingCount !== 1 ? 's' : ''} • Total: {formatPrice(totalAmount)}
                         </p>
                       </div>
                     </div>
@@ -584,7 +586,7 @@ export default function AdminBookingsPage() {
                                       {booking.services.map((bs, idx) => (
                                         <div key={idx} className="flex justify-between text-sm">
                                           <span className="text-gray-700">{bs.service.name}{(bs.quantity ?? 1) > 1 ? ` ×${bs.quantity}` : ''}</span>
-                                          <span className="text-gray-600">₹{bs.price}</span>
+                                          <span className="text-gray-600">{formatPrice(bs.price)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -594,22 +596,22 @@ export default function AdminBookingsPage() {
                                   <div className="lg:col-span-3">
                                     <div className="flex items-center gap-2 mb-2">
                                       <DollarSign className="text-gray-400" size={18} />
-                                      <span className="font-semibold text-lg">₹{booking.payment?.totalAmount ?? bookingTotal}</span>
+                                      <span className="font-semibold text-lg">{formatPrice(booking.payment?.totalAmount ?? bookingTotal)}</span>
                                     </div>
                                     <div className="text-sm space-y-1 mb-2">
                                       <div className="flex justify-between text-gray-700">
                                         <span>Paid:</span>
-                                        <span className="font-medium text-green-700">₹{booking.payment?.amountPaid ?? 0}</span>
+                                        <span className="font-medium text-green-700">{formatPrice(booking.payment?.amountPaid ?? 0)}</span>
                                       </div>
                                       <div className="flex justify-between text-gray-700">
                                         <span>Due:</span>
-                                        <span className="font-medium text-amber-700">₹{Math.max(0, (booking.payment?.totalAmount ?? bookingTotal) - (booking.payment?.amountPaid ?? 0))}</span>
+                                        <span className="font-medium text-amber-700">{formatPrice(Math.max(0, (booking.payment?.totalAmount ?? bookingTotal) - (booking.payment?.amountPaid ?? 0)))}</span>
                                       </div>
                                       {(booking.payment?.onlineAmount !== undefined && booking.payment?.onlineAmount > 0) && (
-                                        <div className="text-xs text-gray-500">Online: ₹{booking.payment.onlineAmount}</div>
+                                        <div className="text-xs text-gray-500">Online: {formatPrice(booking.payment.onlineAmount)}</div>
                                       )}
                                       {(booking.payment?.cashAmount !== undefined && booking.payment?.cashAmount > 0) && (
-                                        <div className="text-xs text-gray-500">Cash: ₹{booking.payment.cashAmount}</div>
+                                        <div className="text-xs text-gray-500">Cash: {formatPrice(booking.payment.cashAmount)}</div>
                                       )}
                                     </div>
                                     <div className="mb-2">
@@ -695,12 +697,12 @@ export default function AdminBookingsPage() {
               {paymentModal.mode === 'add_cash' ? 'Record cash payment' : 'Edit payment breakdown'}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Booking {paymentModal.booking.token} — Total: ₹{paymentModal.booking.payment?.totalAmount ?? paymentModal.booking.services.reduce((s, bs) => s + bs.price, 0)}
+              Booking {paymentModal.booking.token} — Total: {formatPrice(paymentModal.booking.payment?.totalAmount ?? paymentModal.booking.services.reduce((s, bs) => s + bs.price, 0))}
             </p>
             {paymentModal.mode === 'add_cash' ? (
               <>
-                <p className="text-sm text-gray-700 mb-2">Amount already paid: ₹{paymentModal.booking.payment?.amountPaid ?? 0}</p>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount to add (₹)</label>
+                <p className="text-sm text-gray-700 mb-2">Amount already paid: {formatPrice(paymentModal.booking.payment?.amountPaid ?? 0)}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount to add ()</label>
                 <input
                   type="number"
                   min="0"
@@ -713,7 +715,7 @@ export default function AdminBookingsPage() {
               </>
             ) : (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Online amount (₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Online amount ()</label>
                 <input
                   type="number"
                   min="0"
@@ -722,7 +724,7 @@ export default function AdminBookingsPage() {
                   onChange={(e) => setEditOnline(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
                 />
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount (₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cash amount ()</label>
                 <input
                   type="number"
                   min="0"

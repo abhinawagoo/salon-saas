@@ -5,6 +5,7 @@ import { recordSystemMessage } from '@/lib/whatsapp-chat'
 import { getOrAssignBillNo } from '@/lib/billNo'
 import { getPublicInvoiceUrl } from '@/lib/invoiceUrl'
 import { normalizeMobileForDb } from '@/lib/phone'
+import { formatCurrencyPdf } from '@/lib/currency'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,7 +72,11 @@ export async function POST(
 
     const invoiceLink = getPublicInvoiceUrl(booking.token)
     const billNo = await getOrAssignBillNo(bookingId)
-    const p = await prisma.payment.findFirst({ where: { bookingId } })
+    const [p, siteConfig] = await Promise.all([
+      prisma.payment.findFirst({ where: { bookingId } }),
+      prisma.siteCustomization.findFirst({ select: { currency: true } }),
+    ])
+    const currency = siteConfig?.currency || 'EUR'
     const amountPaid = p?.amountPaid ?? 0
     const balanceDue = Math.max(0, (p?.totalAmount ?? 0) - (p?.amountPaid ?? 0))
 
@@ -98,7 +103,7 @@ export async function POST(
     }
 
     // Record in unified chat DB
-    await recordSystemMessage(targetMobile, `Invoice sent — Bill ${billNo} · ₹${Math.round(amountPaid)} paid`, {
+    await recordSystemMessage(targetMobile, `Invoice sent — Bill ${billNo} · ${formatCurrencyPdf(Math.round(amountPaid), currency, 0)} paid`, {
       customerName: booking.user.name || undefined,
       templateName: process.env.WHATSAPP_INVOICE_TEMPLATE_NAME || 'customer_invoice',
       refType: 'payment',

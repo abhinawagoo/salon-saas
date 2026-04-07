@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BarChart3, Calendar, DollarSign, MapPin, Download } from 'lucide-react'
 import { setUserRole } from '@/lib/auth'
+import { useCurrency } from '@/lib/CurrencyContext'
 import { format, parseISO, subDays } from 'date-fns'
 import { formatTime12h } from '@/lib/formatTime'
 
@@ -37,6 +38,7 @@ interface ReportData {
 type PeriodType = 'day' | 'week' | 'month' | 'year' | 'dateRange'
 
 export default function AdminReportsPage() {
+  const { formatPrice } = useCurrency()
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const weekAgoStr = format(subDays(new Date(), 7), 'yyyy-MM-dd')
   const [locations, setLocations] = useState<Location[]>([])
@@ -229,7 +231,7 @@ export default function AdminReportsPage() {
                   <DollarSign size={20} />
                   <span className="text-sm font-medium">Total Revenue (Sales)</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">₹{report.summary.totalRevenue.toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatPrice(report.summary.totalRevenue)}</p>
                 <p className="text-xs text-gray-500 mt-1">{periodLabel} wise · {rangeLabel}</p>
               </div>
             </div>
@@ -254,7 +256,7 @@ export default function AdminReportsPage() {
                         <tr key={row.locationId}>
                           <td className="px-6 py-4 font-medium text-gray-900">{row.locationName}</td>
                           <td className="px-6 py-4 text-right">{row.totalBookings}</td>
-                          <td className="px-6 py-4 text-right font-medium">₹{row.totalRevenue.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-medium">{formatPrice(row.totalRevenue)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -292,7 +294,7 @@ export default function AdminReportsPage() {
                           <td className="px-6 py-3 font-mono text-sm">{b.token}</td>
                           <td className="px-6 py-3 text-sm text-gray-600">{b.locationName ?? '–'}</td>
                           <td className="px-6 py-3 text-sm">{b.customerName} · {b.customerMobile}</td>
-                          <td className="px-6 py-3 text-right font-medium">₹{b.amountPaid.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-3 text-right font-medium">{formatPrice(b.amountPaid)}</td>
                           <td className="px-6 py-3">
                             <span className={`px-2 py-0.5 rounded text-xs ${(b.paymentStatus || 'PENDING') === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                               {b.paymentStatus || 'PENDING'}

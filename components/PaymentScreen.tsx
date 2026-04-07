@@ -2,6 +2,7 @@
 
 import { CreditCard, Wallet, Shield, Plus, Minus, Trash2, Store } from 'lucide-react'
 import { useState } from 'react'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface Service {
   id: string
@@ -54,6 +55,7 @@ export default function PaymentScreen({
   onPaymentTypeSelect,
   paymentOptions,
 }: PaymentScreenProps) {
+  const { formatPrice } = useCurrency()
   const [internalType, setInternalType] = useState<PaymentType | null>(null)
   const selectedPaymentType = controlledType ?? internalType
 
@@ -61,12 +63,12 @@ export default function PaymentScreen({
   const options: ResolvedPaymentOption[] = paymentOptions && paymentOptions.length > 0
     ? paymentOptions
     : [
-        { type: 'FULL', label: 'Pay Full Amount', amount: totalAmount, description: `₹${totalAmount.toLocaleString('en-IN')}` },
+        { type: 'FULL', label: 'Pay Full Amount', amount: totalAmount, description: formatPrice(totalAmount) },
         {
           type: 'ADVANCE',
           label: 'Pay Advance',
           amount: Math.round(totalAmount * 0.3),
-          description: `₹${Math.round(totalAmount * 0.3).toLocaleString('en-IN')} (30%) · Pay remaining at salon`,
+          description: `${formatPrice(Math.round(totalAmount * 0.3))} (30%) · Pay remaining at salon`,
         },
       ]
 
@@ -151,7 +153,7 @@ export default function PaymentScreen({
                   ) : null}
                 </div>
                 <p className="text-sm font-semibold text-gray-900 shrink-0 justify-self-end">
-                  ₹{lineTotal.toLocaleString('en-IN')}
+                  {formatPrice(lineTotal)}
                 </p>
               </div>
             )
@@ -163,7 +165,7 @@ export default function PaymentScreen({
                 totalBump ? 'scale-105 text-green-600' : 'scale-100 text-gray-900'
               }`}
             >
-              ₹{totalAmount.toLocaleString('en-IN')}
+              {formatPrice(totalAmount)}
             </p>
           </div>
         </div>
@@ -199,7 +201,7 @@ export default function PaymentScreen({
                       {opt.label}
                     </p>
                     <p className={`text-xs sm:text-sm font-light mt-0.5 ${isSelected ? 'text-white/80' : 'text-gray-600'}`}>
-                      {opt.type === 'FREE' ? 'No payment required now' : `₹${opt.amount.toLocaleString('en-IN')}`}
+                      {opt.type === 'FREE' ? 'No payment required now' : formatPrice(opt.amount)}
                     </p>
                     {opt.description && opt.type !== 'FULL' && (
                       <p className={`text-xs mt-0.5 font-light ${isSelected ? 'text-white/70' : 'text-gray-500'}`}>
@@ -247,7 +249,7 @@ export default function PaymentScreen({
             >
               {isFree
                 ? 'Confirm Booking'
-                : `Pay ₹${selectedOption.amount.toLocaleString('en-IN')} Now`}
+                : `Pay ${formatPrice(selectedOption.amount)} Now`}
             </button>
             <p className="text-xs text-gray-500 text-center mt-3 sm:mt-4 font-light">
               {isFree

@@ -1,6 +1,7 @@
 'use client'
 
 import { X, Plus, Minus, Trash2 } from 'lucide-react'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface ServiceModalProps {
   service: {
@@ -64,6 +65,7 @@ function parseDescription(description: string): { type: 'paragraph' | 'list'; co
 }
 
 export default function ServiceModal({ service, isOpen, onClose, onAdd, quantity = 0, onIncrease, onDecrease, onDelete }: ServiceModalProps) {
+  const { formatPrice } = useCurrency()
   if (!isOpen) return null
 
   const hasQuantity = quantity > 0
@@ -139,7 +141,7 @@ export default function ServiceModal({ service, isOpen, onClose, onAdd, quantity
           </div>
           <div>
             <span className="text-xs text-gray-500 block">Price</span>
-            <span className="font-semibold text-primary-600 text-lg">₹{service.price}</span>
+            <span className="font-semibold text-primary-600 text-lg">{formatPrice(service.price)}</span>
           </div>
         </div>
 
